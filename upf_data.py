@@ -475,40 +475,6 @@ def write_upf_v2(upf: UPFData, filename: str):
         
         f.write('</UPF>\n')
 
-def main():
-    """Main program"""
-    if len(sys.argv) != 2:
-        print("Usage: python reproduce_grid_cpmd2upf.py <cpmd_file>")
-        sys.exit(1)
-    
-    filein = sys.argv[1]
-    
-    if not os.path.exists(filein):
-        print(f"Error: file {filein} not found")
-        sys.exit(2)
-    
-    print(f"Reading CPMD file: {filein}")
-    
-    try:
-        # Read CPMD file
-        cpmd_data = read_cpmd(filein)
-        
-        # Convert to UPF format
-        upf_data = convert_cpmd(cpmd_data)
-        
-        # Write UPF file
-        fileout = filein + '.UPF'
-        print(f"Output PP file in UPF format: {fileout}")
-        write_upf_v2(fileout, upf_data)
-        
-        print("Pseudopotential successfully written")
-        print("Please review the content of the PP_INFO fields")
-        print("*** Please TEST BEFORE USING !!! ***")
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(3)
-
 import numpy as np
 
 
@@ -527,6 +493,21 @@ def compare_upf_objects(upf1, upf2, rtol=1e-6, atol=1e-6):
         elif(val1!=val2):
             return False
     return True
+
+def rwtest(upf_ref, upf_wr, rtol=1e-6, atol=1e-6):
+    try:
+        objects_equal = (upf_ref.__dict__ == upf_wr.__dict__)
+        if hasattr(objects_equal, 'all'):
+            objects_equal = objects_equal.all()
+    except ValueError:
+        # Handle array comparison manually
+        objects_equal = compare_upf_objects(upf_ref, upf_wr, rtol, atol)
+    if objects_equal:
+        print('RW test passed')
+    else:
+        print(f'RW test faild, ref=', upf_ref.__dict__)
+        print(f'result=', upf_wr.__dict__)
+    
         
 if __name__ == '__main__':
     """for read-and-write (RW) test, usage: python upf_data.py <upf_file_in> <upf_file_out>"""
@@ -539,17 +520,6 @@ if __name__ == '__main__':
     write_upf_v2(upf_ref, wfile)
     assert(os.path.exists(wfile))
     upf_wr = read_upf_file(wfile)
+    rwtest(upf_ref, upf_wr)
 
-    try:
-        objects_equal = (upf_ref.__dict__ == upf_wr.__dict__)
-        if hasattr(objects_equal, 'all'):
-            objects_equal = objects_equal.all()
-    except ValueError:
-        # Handle array comparison manually
-        objects_equal = compare_upf_objects(upf_ref, upf_wr)
-    if objects_equal:
-        print('RW test passed')
-    else:
-        print(f'RW test faild, ref=', upf_ref.__dict__)
-        print(f'result=', upf_wr.__dict__)
     os.remove(wfile)
