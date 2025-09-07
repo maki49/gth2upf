@@ -100,12 +100,14 @@ class UPFData:
         return self
             
     def replace_grid(self, grid:Grid = None):
+        r_old = self.grid.r.copy() # used for interpolation
         zmesh = self.grid.zmesh
         self.grid = grid
         if self.grid is None:
             self.grid = Grid(zmesh=zmesh)
+            
         # Helper function to pad/trim array to match grid mesh size
-        def adjust_array(v):
+        def pad_at_last(v): # used for the same grid type
             if v is None:
                 return None
             v = np.asarray(v)
@@ -113,21 +115,24 @@ class UPFData:
                 # Pad with zeros
                 return np.pad(v, (0, self.grid.mesh - len(v)))
             return v[:self.grid.mesh]
-       
-        # Adjust arrays to match new grid size
-        self.vloc = adjust_array(self.vloc)
-        self.rho_at = adjust_array(self.rho_at)
-        self.rho_atc = adjust_array(self.rho_atc)
+        def interpolate(v): # used for the different grid type
+            if v is None:
+                return None
+            assert(len(v) == len(r_old))
+            return np.interp(self.grid.r, r_old, v)
+        # Interpolate arrays to match new grid size
+        self.vloc = interpolate(self.vloc)
+        self.rho_at = interpolate(self.rho_at)
+        self.rho_atc = interpolate(self.rho_atc)
         
-        # Adjust beta functions
-            
+        # Interpolate beta functions
         if self.beta is not None:
             self.kbeta = np.ones(self.nbeta, dtype=int)*self.grid.mesh
-            self.beta = [adjust_array(b) for b in self.beta]
+            self.beta = [interpolate(b) for b in self.beta]
             
-        # Adjust chi functions
+        # Interpolate chi functions
         if self.chi is not None:
-            self.chi = [adjust_array(c) for c in self.chi]
+            self.chi = [interpolate(c) for c in self.chi]
         return self
 
 

@@ -156,4 +156,7 @@ if __name__ == '__main__':
     file_list= [res_file, '../test/ref_upf/C-GTH-PBE-1.upf']
     compare_local(file_list)
     compare_rho(file_list)
+    
     os.remove(res_file)
+    os.remove('C.inp')
+    os.remove('cp2k.out')
