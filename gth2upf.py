@@ -30,6 +30,8 @@ def gen_cp2k_input(data):
     pseudo_content = find_pseudo_content(gth_path, element, xc, valence)
     prefix= data.setdefault('prefix', f"{element}-GTH-{xc}-q{valence}")
     core, valence = elec_config.get_core_valence(element, valence)
+    quadrature = data.setdefault('quadrature', 'GC_LOG')
+    grid_points = data.setdefault('grid_points', 400)
     str_core =  f"CORE [{core[0]}]"
     if len(core) > 1:
         for item in core[1:]:
@@ -64,6 +66,8 @@ def gen_cp2k_input(data):
   &END
   &PP_BASIS
      BASIS_TYPE GEOMETRICAL_GTO
+     QUADRATURE {quadrature.upper()}
+     GRID_POINTS {grid_points}
   &END PP_BASIS
   &POTENTIAL
     PSEUDO_TYPE GTH
