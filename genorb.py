@@ -32,6 +32,9 @@ def grep_cp2k_basis_molopt(data):
     return writefile, short_range
 
 if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage: python genorb.py cp2k_basis.json")
+        exit(1)
     file_path = sys.argv[1]
     with open(file_path, 'r') as file:
         data = json.load(file)

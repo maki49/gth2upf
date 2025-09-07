@@ -100,13 +100,12 @@ def gen_single_upf(data):
     inp = gen_cp2k_input(data)
     run_cp2k(data['cp2k_path'], inp)
     postprocess(data)
-
-if __name__ == "__main__":
-    file_path = sys.argv[1]
+    
+def main(file_path):
     with open(file_path, 'r') as file:
         params = json.load(file)
     gen_single_upf(params)
-    
+
     from upf_data import read_upf_file, write_upf_v2
     # postprocess
     upf_gen = read_upf_file(params['prefix']+"-1.upf")
@@ -114,3 +113,9 @@ if __name__ == "__main__":
     if params['quadrature'].upper() == 'CPMD2UPF_DEFAULT':
         upf = upf.replace_grid()
     write_upf_v2(upf, params['prefix']+"-1.upf")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python gth2upf.py <params.json>")
+        sys.exit(1)
+    main(sys.argv[1])
