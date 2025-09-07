@@ -1,3 +1,4 @@
+from element_list import ElementList
 from grid import Grid
 
 class UPFData:
@@ -87,6 +88,48 @@ class UPFData:
     
     def __ne__(self, other) -> bool:
         return not self.__eq__(other)
+
+    def correct_lmax(self):
+        if len(self.lll) > 0:
+            self.lmax = max(self.lmax, max(self.lll))
+        if len(self.lchi) > 0:
+            self.lmax = max(self.lmax, max(self.lchi))
+        return self
+    def correct_zmesh(self):
+        self.grid.zmesh = ElementList().name2index(self.psd)
+        return self
+            
+    def replace_grid(self, grid:Grid = None):
+        zmesh = self.grid.zmesh
+        self.grid = grid
+        if self.grid is None:
+            self.grid = Grid(zmesh=zmesh)
+        # Helper function to pad/trim array to match grid mesh size
+        def adjust_array(v):
+            if v is None:
+                return None
+            v = np.asarray(v)
+            if len(v) < self.grid.mesh:
+                # Pad with zeros
+                return np.pad(v, (0, self.grid.mesh - len(v)))
+            return v[:self.grid.mesh]
+       
+        # Adjust arrays to match new grid size
+        self.vloc = adjust_array(self.vloc)
+        self.rho_at = adjust_array(self.rho_at)
+        self.rho_atc = adjust_array(self.rho_atc)
+        
+        # Adjust beta functions
+            
+        if self.beta is not None:
+            self.kbeta = np.ones(self.nbeta, dtype=int)*self.grid.mesh
+            self.beta = [adjust_array(b) for b in self.beta]
+            
+        # Adjust chi functions
+        if self.chi is not None:
+            self.chi = [adjust_array(c) for c in self.chi]
+        return self
+
 
 import re
 

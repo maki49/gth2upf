@@ -30,7 +30,15 @@ def gen_cp2k_input(data):
     pseudo_content = find_pseudo_content(gth_path, element, xc, valence)
     prefix= data.setdefault('prefix', f"{element}-GTH-{xc}-q{valence}")
     core, valence = elec_config.get_core_valence(element, valence)
-    quadrature = data.setdefault('quadrature', 'GC_LOG')
+    
+    quadrature = data.get('quadrature', 'GC_LOG')
+    cp2k_quadrature = ['GC_LOG', 'GC_SIMPLE', 'GC_TRANSFORMED']
+    if quadrature.upper() not in cp2k_quadrature:
+        quadrature = 'GC_LOG'
+        print(f"CP2K only supports QUADRATURE={cp2k_quadrature}. Using GC_LOG to generate the CP2K input file.")
+    if quadrature.upper() == 'CPMD2UPF_DEFAULT':
+        print("Then the grid of the CP2K-generated file will be replaced by the default grid used by cpmd2upf().")
+        
     grid_points = data.setdefault('grid_points', 400)
     str_core =  f"CORE [{core[0]}]"
     if len(core) > 1:
@@ -96,5 +104,13 @@ def gen_single_upf(data):
 if __name__ == "__main__":
     file_path = sys.argv[1]
     with open(file_path, 'r') as file:
-        data = json.load(file)
-    gen_single_upf(data)
+        params = json.load(file)
+    gen_single_upf(params)
+    
+    from upf_data import read_upf_file, write_upf_v2
+    # postprocess
+    upf_gen = read_upf_file(params['prefix']+"-1.upf")
+    upf = upf_gen.correct_lmax().correct_zmesh()
+    if params['quadrature'].upper() == 'CPMD2UPF_DEFAULT':
+        upf = upf.replace_grid()
+    write_upf_v2(upf, params['prefix']+"-1.upf")
