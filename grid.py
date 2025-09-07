@@ -2,24 +2,36 @@ from math import log, exp
 import numpy as np
 
 class Grid:
-    def __init__(self, zmesh=1, r=None):
+    def __init__(self, zmesh=1, r=None, gen_default=True):
         self.zmesh = zmesh
-        self.r = np.zeros(0)
+        self.r = None
         self.mesh = 0   # number of radial grid points
         self.dx = 0.0
-        self.rab = np.zeros(0)
+        self.rab = None
         self.rmax = 0.0
         self.xmin = 0.0
         if r is not None and len(r) > 1:
             self.r = r
             self.mesh = len(r)
             self.dx = log(self.r[1]/self.r[0])
+        elif not gen_default:
+            return
         else:
             self.default_grid_cpmd2upf(self.zmesh)
         self.rab = self.r * self.dx
         self.rmax = self.r[-1]
         self.xmin = log(self.zmesh * self.r[0])
-                
+    
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Grid):
+            return False
+        return  (self.mesh == other.mesh and
+                self.dx == other.dx and
+                self.xmin == other.xmin and
+                self.rmax == other.rmax and
+                np.allclose(self.r, other.r, rtol=1e-6, atol=1e-6) and
+                np.allclose(self.rab, other.rab, rtol=1e-6, atol=1e-6))
+     
     # Check grid consistency
     def check_grid_consistency(self):
         for i in range(1, min(10, self.mesh)):

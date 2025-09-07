@@ -49,6 +49,14 @@ class GTHData:
         self.nh_nl = []  # number of non-local projectors for each angular momentum channel l
         self.h = []      # coefficients of the non-local projector functions for each angular momentum channel l   
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, GTHData):
+            return False
+        return (self.__dict__ == other.__dict__)
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 def read_gth(lines) -> GTHData:
     """Read GTH pseudopotential of CP2K format"""
     gth_data=GTHData()
@@ -130,7 +138,7 @@ if __name__ == "__main__":
     assert(os.path.exists(wfile))
     gth_wr = read_gth_file(wfile)
     # diff=os.popen(f'diff {rfile} {wfile}').read()
-    if (gth_ref.__dict__==gth_wr.__dict__):
+    if (gth_ref == gth_wr):
         print('RW test passed')
     else:
         print(f'RW test faild, ref=', gth_ref.__dict__)

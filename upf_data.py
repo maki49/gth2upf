@@ -1,3 +1,5 @@
+from grid import Grid
+
 class UPFData:
     """Class to hold UPF pseudopotential data"""
     
@@ -39,13 +41,7 @@ class UPFData:
         self.rcutus_chi = []
         
         # Grid
-        self.mesh = 0
-        self.dx = 0.0
-        self.rmax = 0.0
-        self.xmin = 0.0
-        self.zmesh = 0.0
-        self.rab = None
-        self.r = None
+        self.grid = None
         
         # Potentials and densities
         self.rho_atc = None
@@ -67,9 +63,32 @@ class UPFData:
         # Atomic wavefunctions and density
         self.chi = None
         self.rho_at = None
+        
+        # tolerance
+        self.rtol = 1e-6
+        self.atol = 1e-6
+        
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, UPFData):
+            return False
+        dict1, dict2 = self.__dict__, other.__dict__
+        if set(dict1.keys()) != set(dict2.keys()):
+            return False
+        
+        for key in dict1.keys():
+            val1, val2 = dict1[key], dict2[key]
+            if isinstance(val1, np.ndarray) or isinstance(val2, np.ndarray) \
+                or isinstance(val1, list) or isinstance(val2, list):
+                if not np.allclose(np.asarray(val1), np.asarray(val2), rtol=self.rtol, atol=self.atol):
+                    return False
+            elif(val1!=val2):
+                return False
+        return True
+    
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
 import re
-import numpy as np
 
 def read_upf_file(filename):
     """Read UPF pseudopotential file and return UPFData object
@@ -81,6 +100,7 @@ def read_upf_file(filename):
         UPFData: Parsed UPF data
     """
     upf_data = UPFData()
+    upf_data.grid = Grid(gen_default=False) # read as provided
     
     with open(filename, 'r') as f:
         content = f.read()
@@ -176,7 +196,7 @@ def read_upf_file(filename):
                 elif attr == 'l_local':
                     upf_data.lloc = int(value)
                 elif attr == 'mesh_size':
-                    upf_data.mesh = int(value)
+                    upf_data.grid.mesh = int(value)
                 elif attr == 'number_of_wfc':
                     upf_data.nwfc = int(value)
                 elif attr == 'number_of_proj':
@@ -189,19 +209,19 @@ def read_upf_file(filename):
         
         dx_match = re.search(r'dx="([^"]+)"', mesh_attrs)
         if dx_match:
-            upf_data.dx = float(dx_match.group(1))
+            upf_data.grid.dx = float(dx_match.group(1))
 
         xmin_match = re.search(r'xmin="([^"]+)"', mesh_attrs)
         if xmin_match:
-            upf_data.xmin = float(xmin_match.group(1))
+            upf_data.grid.xmin = float(xmin_match.group(1))
             
         rmax_match = re.search(r'rmax="([^"]+)"', mesh_attrs)
         if rmax_match:
-            upf_data.rmax = float(rmax_match.group(1))
+            upf_data.grid.rmax = float(rmax_match.group(1))
             
         zmesh_match = re.search(r'zmesh="([^"]+)"', mesh_attrs)
         if zmesh_match:
-            upf_data.zmesh = float(zmesh_match.group(1))
+            upf_data.grid.zmesh = float(zmesh_match.group(1))
     
     # Parse PP_R section (radial grid)
     r_match = re.search(r'<PP_R[^>]*>([^<]+)</PP_R>', content)
@@ -211,7 +231,7 @@ def read_upf_file(filename):
         for line in r_data.split('\n'):
             if line.strip():
                 r_values.extend([float(x) for x in line.split()])
-        upf_data.r = np.array(r_values)
+        upf_data.grid.r = np.array(r_values)
 
     # Parse PP_RAB section (dr/di)
     rab_match = re.search(r'<PP_RAB[^>]*>([^<]+)</PP_RAB>', content)
@@ -221,7 +241,7 @@ def read_upf_file(filename):
         for line in rab_data.split('\n'):
             if line.strip():
                 rab_values.extend([float(x) for x in line.split()])
-        upf_data.rab = np.array(rab_values)
+        upf_data.grid.rab = np.array(rab_values)
 
     
     # Parse PP_LOCAL section (local potential)
@@ -266,7 +286,7 @@ def read_upf_file(filename):
             n = int(np.sqrt(len(dij_values)))
             upf_data.dion = np.array(dij_values).reshape(n, n)
     if upf_data.nbeta > 0:
-        upf_data.kbeta=np.ones(upf_data.nbeta, dtype=int)*upf_data.mesh
+        upf_data.kbeta=np.ones(upf_data.nbeta, dtype=int)*upf_data.grid.mesh
         
     # Parse PP_PSWFC section (pseudo wavefunctions)
     pswfc_match = re.search(r'<PP_PSWFC>(.*?)</PP_PSWFC>', content, re.DOTALL)
@@ -358,30 +378,30 @@ def write_upf_v2(upf: UPFData, filename: str):
         f.write(f'    l_max="{upf.lmax}"\n')
         f.write(f'    l_max_rho="{upf.lmax_rho}"\n')
         f.write(f'    l_local="{upf.lloc}"\n')
-        f.write(f'    mesh_size="{upf.mesh}"\n')
+        f.write(f'    mesh_size="{upf.grid.mesh}"\n')
         f.write(f'    number_of_wfc="{upf.nwfc}"\n')
         f.write(f'    number_of_proj="{upf.nbeta}"/>\n')
         
         # PP_MESH
-        f.write(f'  <PP_MESH dx="{upf.dx:.16e}" mesh="{upf.mesh}" xmin="{upf.xmin:.16e}" rmax="{upf.rmax:.16e}" zmesh="{upf.zmesh:.16e}">\n')
+        f.write(f'  <PP_MESH dx="{upf.grid.dx:.16e}" mesh="{upf.grid.mesh}" xmin="{upf.grid.xmin:.16e}" rmax="{upf.grid.rmax:.16e}" zmesh="{upf.grid.zmesh:.16e}">\n')
         
         # PP_R
-        f.write('    <PP_R type="real" size="{}" columns="4">\n'.format(upf.mesh))
-        for i in range(0, upf.mesh, 4):
+        f.write('    <PP_R type="real" size="{}" columns="4">\n'.format(upf.grid.mesh))
+        for i in range(0, upf.grid.mesh, 4):
             line = '      '
             for j in range(4):
-                if i+j < upf.mesh:
-                    line += f'{upf.r[i+j]:18.11e} '
+                if i+j < upf.grid.mesh:
+                    line += f'{upf.grid.r[i+j]:18.11e} '
             f.write(line.rstrip() + '\n')
         f.write('    </PP_R>\n')
         
         # PP_RAB
-        f.write('    <PP_RAB type="real" size="{}" columns="4">\n'.format(upf.mesh))
-        for i in range(0, upf.mesh, 4):
+        f.write('    <PP_RAB type="real" size="{}" columns="4">\n'.format(upf.grid.mesh))
+        for i in range(0, upf.grid.mesh, 4):
             line = '      '
             for j in range(4):
-                if i+j < upf.mesh:
-                    line += f'{upf.rab[i+j]:18.11e} '
+                if i+j < upf.grid.mesh:
+                    line += f'{upf.grid.rab[i+j]:18.11e} '
             f.write(line.rstrip() + '\n')
         f.write('    </PP_RAB>\n')
         
@@ -389,21 +409,21 @@ def write_upf_v2(upf: UPFData, filename: str):
         
         # PP_NLCC (if present)
         if upf.nlcc:
-            f.write('  <PP_NLCC type="real" size="{}" columns="4">\n'.format(upf.mesh))
-            for i in range(0, upf.mesh, 4):
+            f.write('  <PP_NLCC type="real" size="{}" columns="4">\n'.format(upf.grid.mesh))
+            for i in range(0, upf.grid.mesh, 4):
                 line = '    '
                 for j in range(4):
-                    if i+j < upf.mesh:
+                    if i+j < upf.grid.mesh:
                         line += f'{upf.rho_atc[i+j]:18.11e} '
                 f.write(line.rstrip() + '\n')
             f.write('  </PP_NLCC>\n')
         
         # PP_LOCAL
-        f.write('  <PP_LOCAL type="real" size="{}" columns="4">\n'.format(upf.mesh))
-        for i in range(0, upf.mesh, 4):
+        f.write('  <PP_LOCAL type="real" size="{}" columns="4">\n'.format(upf.grid.mesh))
+        for i in range(0, upf.grid.mesh, 4):
             line = '    '
             for j in range(4):
-                if i+j < upf.mesh:
+                if i+j < upf.grid.mesh:
                     line += f'{upf.vloc[i+j]:18.11e} '
             f.write(line.rstrip() + '\n')
         f.write('  </PP_LOCAL>\n')
@@ -444,7 +464,7 @@ def write_upf_v2(upf: UPFData, filename: str):
             f.write('  <PP_PSWFC>\n')
             
             for i in range(upf.nwfc):
-                f.write(f'    <PP_CHI.{i+1} type="real" size="{upf.mesh}" columns="4" ')
+                f.write(f'    <PP_CHI.{i+1} type="real" size="{upf.grid.mesh}" columns="4" ')
                 # f.write(f'label="{upf.els[i]}"')
                 f.write(f'l="{upf.lchi[i]}" occupation="{upf.oc[i]:.10f}" ')
                 # f.write(f'n="{upf.nchi[i]}"')
@@ -452,10 +472,10 @@ def write_upf_v2(upf: UPFData, filename: str):
                 # f.write(f' cutoff_radius="{upf.rcut_chi[i]:.10f}" ultrasoft_cutoff_radius="{upf.rcutus_chi[i]:.10f}"')
                 f.write('>\n')
                 
-                for ir in range(0, upf.mesh, 4):
+                for ir in range(0, upf.grid.mesh, 4):
                     line = '      '
                     for j in range(4):
-                        if ir+j < upf.mesh:
+                        if ir+j < upf.grid.mesh:
                             line += f'{upf.chi[i][ir+j]:18.11e} '
                     f.write(line.rstrip() + '\n')
                 
@@ -464,11 +484,11 @@ def write_upf_v2(upf: UPFData, filename: str):
             f.write('  </PP_PSWFC>\n')
         
         # PP_RHOATOM
-        f.write('  <PP_RHOATOM type="real" size="{}" columns="4">\n'.format(upf.mesh))
-        for i in range(0, upf.mesh, 4):
+        f.write('  <PP_RHOATOM type="real" size="{}" columns="4">\n'.format(upf.grid.mesh))
+        for i in range(0, upf.grid.mesh, 4):
             line = '    '
             for j in range(4):
-                if i+j < upf.mesh:
+                if i+j < upf.grid.mesh:
                     line += f'{upf.rho_at[i+j]:18.11e} '
             f.write(line.rstrip() + '\n')
         f.write('  </PP_RHOATOM>\n')
@@ -478,31 +498,8 @@ def write_upf_v2(upf: UPFData, filename: str):
 import numpy as np
 
 
-def compare_upf_objects(upf1, upf2, rtol=1e-6, atol=1e-6):
-    dict1, dict2 = upf1.__dict__, upf2.__dict__
-    
-    if set(dict1.keys()) != set(dict2.keys()):
-        return False
-    
-    for key in dict1.keys():
-        val1, val2 = dict1[key], dict2[key]
-        if isinstance(val1, np.ndarray) or isinstance(val2, np.ndarray) \
-            or isinstance(val1, list) or isinstance(val2, list):
-            if not np.allclose(np.asarray(val1), np.asarray(val2), rtol=rtol, atol=atol):
-                return False
-        elif(val1!=val2):
-            return False
-    return True
-
-def rwtest(upf_ref, upf_wr, rtol=1e-6, atol=1e-6):
-    try:
-        objects_equal = (upf_ref.__dict__ == upf_wr.__dict__)
-        if hasattr(objects_equal, 'all'):
-            objects_equal = objects_equal.all()
-    except ValueError:
-        # Handle array comparison manually
-        objects_equal = compare_upf_objects(upf_ref, upf_wr, rtol, atol)
-    if objects_equal:
+def rwtest(upf_ref, upf_wr):
+    if upf_ref == upf_wr:
         print('RW test passed')
     else:
         print(f'RW test faild, ref=', upf_ref.__dict__)
