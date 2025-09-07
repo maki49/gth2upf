@@ -5,5 +5,5 @@
     "valence": 4,
     "prefix": "C-GTH-PBE",
     "grid_points": 500,
-    "quadrature": "CPMD2UPF_DEFAULT"
+    "quadrature": "cpmd2upf_default"
 }
