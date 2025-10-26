@@ -160,6 +160,10 @@ if __name__ == "__main__":
     if (gth_ref == gth_wr):
         print('RW test passed')
     else:
-        print(f'RW test faild, ref=', gth_ref.__dict__)
-        print(f'result=', gth_wr.__dict__)
+        from debug.test_helper import print_dict_mismatches
+        mismatches = print_dict_mismatches(gth_ref.__dict__, gth_wr.__dict__)
+        if(len(mismatches) == 0):
+            print('RW test passed')
+        else:
+            print('RW test failed, mismatches in keys:', mismatches)
     os.remove(wfile)

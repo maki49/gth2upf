@@ -1,0 +1,10 @@
+{
+    "cp2k_path": "/home/fortneu49/cp2k",
+    "element": "W",
+    "xc": "PBE",
+    "valence": 14,
+    "prefix": "W-SOC-GTH-PBE",
+    "grid_points": 500,
+    "quadrature": "cpmd2upf_default",
+    "soc": true
+}
