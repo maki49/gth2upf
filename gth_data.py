@@ -36,6 +36,7 @@ from element_list import ElementList
 class GTHData:
     def __init__(self):
         self.atom_name = ""
+        self.is_soc = False
         self.z = 0
         self.xc = ""
         self.zv = 0
@@ -48,6 +49,7 @@ class GTHData:
         self.rad_nl = [] # radius of the non-local part for each angular momentum channel l
         self.nh_nl = []  # number of non-local projectors for each angular momentum channel l
         self.h = []      # coefficients of the non-local projector functions for each angular momentum channel l   
+        self.k = [[]]      # coefficients of the SOC non-local projector functions for each angular momentum channel l>=1
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, GTHData):
@@ -57,7 +59,7 @@ class GTHData:
     def __ne__(self, other) -> bool:
         return not self.__eq__(other)
 
-def read_gth(lines) -> GTHData:
+def read_gth(lines, is_soc=False) -> GTHData:
     """Read GTH pseudopotential of CP2K format"""
     gth_data=GTHData()
     i=0
@@ -75,7 +77,6 @@ def read_gth(lines) -> GTHData:
             ls=line.split()
             gth_data.nelec_of_l=[int(s) for s in ls]
             gth_data.lmax=len(ls)-1
-            
         elif i==2:
             ls=line.split()
             gth_data.rc = float(ls[0])    # the characteristic radius parameter for the local part
@@ -83,7 +84,11 @@ def read_gth(lines) -> GTHData:
             gth_data.exp_loc=[float(s) for s in ls[2:]]
             
         elif i==3:
-            gth_data.nprj=int(line.strip()) #Number of angular momentum channels fo projectors
+            ls=line.split()
+            if len(ls) >1 and ls[1].strip() == 'SOC':
+                gth_data.is_soc = True
+                gth_data.k = [[]]   #k[l=0] is empty
+            gth_data.nprj=int(ls[0].strip()) #Number of angular momentum channels fo projectors
             lines=lines[4:]
             for l in range(gth_data.nprj):
                 ls=lines[0].split()
@@ -97,6 +102,13 @@ def read_gth(lines) -> GTHData:
                 assert(len(gth_data.h[l])==(nh+1)*nh/2)
                 lines=lines[max(1,nh):]
                 
+                # if soc, read knl for l>=1
+                if gth_data.is_soc and l>=1:
+                    gth_data.k.append([])
+                    for k in range(nh):
+                        gth_data.k[l].extend([float(s) for s in lines[k].split()])
+                    assert(len(gth_data.k[l])==(nh+1)*nh/2)
+                    lines=lines[nh:]
         else: 
             print(f"Error: unexpected line at index {i}: {line}")
             continue
@@ -116,7 +128,7 @@ def write_gth_file(gth_data: GTHData, filename: str):
         f.write(f"{gth_data.atom_name} GTH-{gth_data.xc}-q{gth_data.zv}\n")
         f.write(" ".join([str(s) for s in gth_data.nelec_of_l]) + "\n")
         f.write(f"{gth_data.rc} {gth_data.nexp_loc} " + " ".join([str(s) for s in gth_data.exp_loc]) + "\n")
-        f.write(f"{gth_data.nprj}\n")
+        f.write(f"{gth_data.nprj}"+ (" SOC" if gth_data.is_soc else "") + "\n")
         for l in range(gth_data.nprj):
             f.write(f"{gth_data.rad_nl[l]} {gth_data.nh_nl[l]}\t")
             nh_now = gth_data.nh_nl[l]
@@ -125,6 +137,13 @@ def write_gth_file(gth_data: GTHData, filename: str):
                 f.write("\t".join([str(s) for s in h_now[:nh_now]]) + "\n")
                 h_now = h_now[nh_now:]
                 nh_now-=1
+            if gth_data.is_soc and l>=1:
+                k_now = gth_data.k[l]
+                nk_now = gth_data.nh_nl[l] # nk=nh
+                while nk_now > 0:
+                    f.write("\t".join([str(s) for s in k_now[:nk_now]]) + "\n")
+                    k_now = k_now[nk_now:]
+                    nk_now-=1
                     
                     
 if __name__ == "__main__":
