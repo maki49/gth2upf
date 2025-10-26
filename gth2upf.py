@@ -23,7 +23,14 @@ def find_pseudo_content(gth_path, element, xc, valence):
     return ''.join(content[1:]) #remove the matched header line
   
 def gen_cp2k_input(data):
-    gth_path=os.path.join(data['cp2k_path'], 'data', 'GTH_POTENTIALS')
+    soc=data.get('soc', False)
+    if soc:
+        filename='GTH_SOC_POTENTIALS'
+        print("Notice: currently only the latest CP2K version (2025.8+) supports SOC in ATOM module. See https://github.com/cp2k/cp2k/pull/4363 for the implementation.")
+    else:
+        filename='GTH_POTENTIALS'
+    gth_path=os.path.join(data['cp2k_path'], 'data', filename)
+    
     element = data['element']
     xc= data.setdefault('xc', 'PBE')
     valence= data['valence']
@@ -47,8 +54,7 @@ def gen_cp2k_input(data):
       
     str_valence ="CORE "+' '.join(valence)
     
-    cp2k_inp_content=f"""
-&GLOBAL
+    cp2k_inp_content=f"""&GLOBAL
   PROJECT {element}
   PROGRAM_NAME ATOM
 &END GLOBAL
@@ -65,7 +71,7 @@ def gen_cp2k_input(data):
   &END METHOD
   &PRINT
     &ANALYZE_BASIS
-         OVERLAP_CONDITION_NUMBER T
+         ! OVERLAP_CONDITION_NUMBER T   # not available for lmax > 2
          COMPLETENESS T
     &END ANALYZE_BASIS
     &UPF_FILE
@@ -89,8 +95,10 @@ def gen_cp2k_input(data):
         f.write(cp2k_inp_content)
         return f"{element}.inp"
 
-def run_cp2k(cp2k_dir, inp, out="cp2k.out"):
-    os.system(f"{os.path.join(cp2k_dir, 'exe', 'local', 'cp2k.popt')} -o {out} {inp}")
+def run_cp2k(cp2k_dir, inp, out="cp2k.out", cp2k_type="popt"):
+    cmd = f"{os.path.join(cp2k_dir, 'exe', 'local', 'cp2k.'+cp2k_type)} -o {out} {inp}"
+    print("Running CP2K with command:", cmd)
+    os.system(cmd)
 
 def postprocess(data):
     outfile=data['prefix']+"-1.upf"
@@ -98,7 +106,8 @@ def postprocess(data):
 
 def gen_single_upf(data):
     inp = gen_cp2k_input(data)
-    run_cp2k(data['cp2k_path'], inp)
+    cp2k_type = data.get('cp2k_type', 'popt')
+    run_cp2k(data['cp2k_path'], inp, cp2k_type=cp2k_type)
     postprocess(data)
     
 def main(file_path):
