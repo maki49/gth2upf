@@ -1,0 +1,10 @@
+{
+    "cp2k_path": "/cvmfs/hpcsw.umd.edu/spack-software/2023.11.20/linux-rhel8-zen2/gcc-11.3.0/cp2k-2023.2-yoowsr2gvjb5hzyalmc7l4xkaubfdf2y/bin/cp2k.psmp",
+    "gth_path": "/home/jy246/scratch/program/pyscf/pyscf/pbc/gto/pseudo/gth-pbe.dat",
+    "element": "C",
+    "xc": "PBE",
+    "valence": 4,
+    "prefix": "C-GTH-PBE-q4",
+    "grid_points": 500,
+    "quadrature": "cpmd2upf_default"
+}

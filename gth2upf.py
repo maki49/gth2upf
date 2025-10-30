@@ -6,7 +6,8 @@ import elec_config
 def find_pseudo_content(gth_path, element, xc, valence):
     print("gth_path: ", gth_path)
     search_str = f"GTH-{xc.upper()}-q{valence}"
-    pattern = fr'^{element}.*{search_str}.*'
+    pattern = fr'{element} {search_str}'
+    print('===> pattern', pattern)
     with open(gth_path, 'r') as f:
         lines = f.readlines()
     content = []
@@ -15,7 +16,7 @@ def find_pseudo_content(gth_path, element, xc, valence):
         if re.match(pattern, line):
             found = True
         if found:
-            if line.strip() == "#":
+            if line.startswith('#'):
                 break
             content.append(line)
     if not found:
@@ -23,7 +24,8 @@ def find_pseudo_content(gth_path, element, xc, valence):
     return ''.join(content[1:]) #remove the matched header line
   
 def gen_cp2k_input(data):
-    gth_path=os.path.join(data['cp2k_path'], 'data', 'GTH_POTENTIALS')
+    #gth_path=os.path.join(data['cp2k_path'], 'data', 'GTH_POTENTIALS')
+    gth_path=data['gth_path']
     element = data['element']
     xc= data.setdefault('xc', 'PBE')
     valence= data['valence']
@@ -89,8 +91,10 @@ def gen_cp2k_input(data):
         f.write(cp2k_inp_content)
         return f"{element}.inp"
 
-def run_cp2k(cp2k_dir, inp, out="cp2k.out"):
-    os.system(f"{os.path.join(cp2k_dir, 'exe', 'local', 'cp2k.popt')} -o {out} {inp}")
+#def run_cp2k(cp2k_dir, inp, out="cp2k.out"):
+#    os.system(f"{os.path.join(cp2k_dir, 'exe', 'local', 'cp2k.popt')} -o {out} {inp}")
+def run_cp2k(cp2k_exe, inp, out='cp2k.out'):
+    os.system(f"{cp2k_exe} -o {out} {inp}")
 
 def postprocess(data):
     outfile=data['prefix']+"-1.upf"

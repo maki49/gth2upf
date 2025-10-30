@@ -1,9 +1,0 @@
-{
-    "cp2k_path": "/home/fortneu49/cp2k",
-    "element": "C",
-    "xc": "PBE",
-    "valence": 4,
-    "prefix": "C-GTH-PBE",
-    "grid_points": 500,
-    "quadrature": "cpmd2upf_default"
-}

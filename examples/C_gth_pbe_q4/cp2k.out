@@ -1,0 +1,692 @@
+
+  **** **** ******  **  PROGRAM STARTED AT               2025-09-08 16:25:07.105
+ ***** ** ***  *** **   PROGRAM STARTED ON               login-1.zaratan.umd.edu
+ **    ****   ******    PROGRAM STARTED BY                                 jy246
+ ***** **    ** ** **   PROGRAM PROCESS ID                               1600898
+  **** **  *******  **  PROGRAM STARTED IN /scratch/zt1/project/hzye-prj/user/jy
+                                           246/program/gth2upf/examples/C_gth_pb
+                                           e_q4
+
+ CP2K| version string:                                       CP2K version 2023.2
+ CP2K| source code revision number:                                             
+ CP2K| cp2kflags: ndebug omp libint fftw3 libxc parallel mpi_f08 scalapack cosma
+ CP2K|             xsmm spglib libvori libbqb
+ CP2K| is freely available from                            https://www.cp2k.org/
+ CP2K| Program compiled at                                   2024-07-17 15:05:20
+ CP2K| Program compiled on                              dev-a5-2.zaratan.umd.edu
+ CP2K| Program compiled for                                               x86_64
+ CP2K| Data directory path    /cvmfs/hpcsw.umd.edu/spack-software/2023.11.20/lin
+ CP2K| Input file name                                                     C.inp
+
+ GLOBAL| Method name                                                        ATOM
+ GLOBAL| Project name                                                          C
+ GLOBAL| Run type                                                   ENERGY_FORCE
+ GLOBAL| FFT library                                                       FFTW3
+ GLOBAL| Diagonalization library                                       ScaLAPACK
+ GLOBAL| DGEMM library                                                      BLAS
+ GLOBAL| Orthonormality check for eigenvectors                          DISABLED
+ GLOBAL| Matrix multiplication library                                     COSMA
+ GLOBAL| All-to-all communication in single precision                          F
+ GLOBAL| FFTs using library dependent lengths                                  F
+ GLOBAL| Grid backend                                                       AUTO
+ GLOBAL| Global print level                                               MEDIUM
+ GLOBAL| MPI I/O enabled                                                       T
+ GLOBAL| Total number of message passing processes                             1
+ GLOBAL| Number of threads for this process                                    1
+ GLOBAL| This output is from process                                           0
+ GLOBAL| Stack size for threads created by OpenMP (OMP_STACKSIZE)        default
+ GLOBAL| CPU model name                          AMD EPYC 7763 64-Core Processor
+ GLOBAL| CPUID                                                              1002
+
+ MEMORY| system memory details [Kb]
+ MEMORY|                        rank 0           min           max       average
+ MEMORY| MemTotal            527406024     527406024     527406024     527406024
+ MEMORY| MemFree             148508288     148508288     148508288     148508288
+ MEMORY| Buffers                390604        390604        390604        390604
+ MEMORY| Cached              181578452     181578452     181578452     181578452
+ MEMORY| Slab                 12066492      12066492      12066492      12066492
+ MEMORY| SReclaimable          8732120       8732120       8732120       8732120
+ MEMORY| MemLikelyFree       339209464     339209464     339209464     339209464
+
+
+ *** Fundamental physical constants (SI units) ***
+
+ *** Literature: B. J. Mohr and B. N. Taylor,
+ ***             CODATA recommended values of the fundamental physical
+ ***             constants: 2006, Web Version 5.1
+ ***             http://physics.nist.gov/constants
+
+ Speed of light in vacuum [m/s]                             2.99792458000000E+08
+ Magnetic constant or permeability of vacuum [N/A**2]       1.25663706143592E-06
+ Electric constant or permittivity of vacuum [F/m]          8.85418781762039E-12
+ Planck constant (h) [J*s]                                  6.62606896000000E-34
+ Planck constant (h-bar) [J*s]                              1.05457162825177E-34
+ Elementary charge [C]                                      1.60217648700000E-19
+ Electron mass [kg]                                         9.10938215000000E-31
+ Electron g factor [ ]                                     -2.00231930436220E+00
+ Proton mass [kg]                                           1.67262163700000E-27
+ Fine-structure constant                                    7.29735253760000E-03
+ Rydberg constant [1/m]                                     1.09737315685270E+07
+ Avogadro constant [1/mol]                                  6.02214179000000E+23
+ Boltzmann constant [J/K]                                   1.38065040000000E-23
+ Atomic mass unit [kg]                                      1.66053878200000E-27
+ Bohr radius [m]                                            5.29177208590000E-11
+
+ *** Conversion factors ***
+
+ [u] -> [a.u.]                                              1.82288848426455E+03
+ [Angstrom] -> [Bohr] = [a.u.]                              1.88972613288564E+00
+ [a.u.] = [Bohr] -> [Angstrom]                              5.29177208590000E-01
+ [a.u.] -> [s]                                              2.41888432650478E-17
+ [a.u.] -> [fs]                                             2.41888432650478E-02
+ [a.u.] -> [J]                                              4.35974393937059E-18
+ [a.u.] -> [N]                                              8.23872205491840E-08
+ [a.u.] -> [K]                                              3.15774647902944E+05
+ [a.u.] -> [kJ/mol]                                         2.62549961709828E+03
+ [a.u.] -> [kcal/mol]                                       6.27509468713739E+02
+ [a.u.] -> [Pa]                                             2.94210107994716E+13
+ [a.u.] -> [bar]                                            2.94210107994716E+08
+ [a.u.] -> [atm]                                            2.90362800883016E+08
+ [a.u.] -> [eV]                                             2.72113838565563E+01
+ [a.u.] -> [Hz]                                             6.57968392072181E+15
+ [a.u.] -> [1/cm] (wave numbers)                            2.19474631370540E+05
+ [a.u./Bohr**2] -> [1/cm]                                   5.14048714338585E+03
+ 
+ DBCSR| CPU Multiplication driver                                           XSMM (U)
+ DBCSR| Multrec recursion limit                                              512 (U)
+ DBCSR| Multiplication stack size                                           1000 (D)
+ DBCSR| Maximum elements for images                                    UNLIMITED (U)
+ DBCSR| Multiplicative factor virtual images                                   1 (U)
+ DBCSR| Use multiplication densification                                       T (D)
+ DBCSR| Multiplication size stacks                                             3 (U)
+ DBCSR| Use memory pool for CPU allocation                                     F (U)
+ DBCSR| Number of 3D layers                                               SINGLE (U)
+ DBCSR| Use MPI memory allocation                                              F (U)
+ DBCSR| Use RMA algorithm                                                      F (U)
+ DBCSR| Use Communication thread                                               T (U)
+ DBCSR| Communication thread load                                             87 (D)
+ DBCSR| MPI: My process id                                                     0
+ DBCSR| MPI: Number of processes                                               1
+ DBCSR| OMP: Current number of threads                                         1
+ DBCSR| OMP: Max number of threads                                             1
+ DBCSR| Split modifier for TAS multiplication algorithm                  1.0E+00 (U)
+
+
+
+                           ****  ******  ****   ****   
+                          **  ** ****** **  ** ******  
+                          ******   **   **  ** **  **  
+                          **  **   **    ****  **  **  
+                                                       
+                             University of Zurich      
+                                 2009 - 2015           
+                                                       
+                                 Version 0.0           
+                                                                   
+
+
+ Atomic Energy Calculation             Carbon [C]            Atomic number:    6
+
+
+ METHOD    | Restricted Kohn-Sham Calculation
+ METHOD    | Nonrelativistic Calculation
+ FUNCTIONAL| ROUTINE=DEFAULT
+ FUNCTIONAL| PBE:
+ FUNCTIONAL| J.P.Perdew, K.Burke, M.Ernzerhof, Phys. Rev. Letter, vol. 77, n 18,
+ FUNCTIONAL|  pp. 3865-3868, (1996){spin unpolarized}                           
+
+ Electronic structure
+    Total number of core electrons                                          2.00
+    Total number of valence electrons                                       4.00
+    Total number of electrons                                               6.00
+    Multiplicity                                                   not specified
+    S   [  2.00] 2.00
+    P      2.00
+
+
+ *******************************************************************************
+                  Iteration          Convergence                     Energy [au]
+ *******************************************************************************
+                          1        0.948238E-01                  -5.339291187021
+                          2        0.657788E-01                  -5.348564015259
+                          3        0.145237E-02                  -5.359214493259
+                          4        0.128677E-03                  -5.359218469807
+                          5        0.506747E-05                  -5.359218509918
+                          6        0.127574E-06                  -5.359218509990
+
+ Energy components [Hartree]           Total Energy ::           -5.359218509990
+                                        Band Energy ::           -1.398832248826
+                                     Kinetic Energy ::            3.376976526785
+                                   Potential Energy ::           -8.736195036775
+                                      Virial (-V/T) ::            2.586987196234
+                                        Core Energy ::           -8.317768955360
+                                          XC Energy ::           -1.413511601694
+                                     Coulomb Energy ::            4.372062047064
+                       Total Pseudopotential Energy ::          -11.694745482145
+                       Local Pseudopotential Energy ::          -12.341510522473
+                    Nonlocal Pseudopotential Energy ::            0.646765040328
+
+ Orbital energies  State     L     Occupation   Energy[a.u.]          Energy[eV]
+
+                       1     0          2.000      -0.505341          -13.751018
+
+                       1     1          2.000      -0.194076           -5.281063
+
+
+ Total Electron Density at R=0:                                         0.000000
+
+ Basis Set Condition Numbers: 2*covalent radius=  2.9102
+ Lattice constant:          2.619                Condition number:      100.0000
+ Lattice constant:          2.765                Condition number:      100.0000
+ Lattice constant:          2.910                Condition number:      100.0000
+ Lattice constant:          3.056                Condition number:      100.0000
+ Lattice constant:          3.201                Condition number:      100.0000
+ Lattice constant:          3.347                Condition number:       25.2121
+ Lattice constant:          3.492                Condition number:       21.3962
+ Lattice constant:          3.638                Condition number:       19.4637
+ Lattice constant:          3.783                Condition number:       17.7744
+ Lattice constant:            Inf                Condition number:       13.4458
+
+ Basis Set Completeness Estimates
+   L-quantum number:   0
+    Slater Exponent           Completeness n-qm= 1          Completeness n-qm= 2
+          11.400000                       1.000000                      1.000000
+          10.195833                       1.000000                      1.000000
+           8.991667                       1.000000                      1.000000
+           7.787500                       1.000000                      1.000000
+           6.583333                       1.000000                      1.000000
+           5.379167                       1.000000                      1.000000
+           4.175000                       1.000000                      1.000000
+           2.970833                       1.000000                      1.000000
+           1.766667                       1.000000                      1.000000
+           0.562500                       0.998157                      0.974418
+   L-quantum number:   1
+    Slater Exponent           Completeness n-qm= 2          Completeness n-qm= 3
+           2.250000                       1.000000                      0.999998
+           2.062500                       1.000000                      0.999998
+           1.875000                       1.000000                      0.999999
+           1.687500                       1.000000                      0.999999
+           1.500000                       1.000000                      0.999998
+           1.312500                       1.000000                      0.999999
+           1.125000                       1.000000                      0.999998
+           0.937500                       0.999995                      0.999769
+           0.750000                       0.999393                      0.991749
+           0.562500                       0.984651                      0.909159
+
+
+                             NORMAL TERMINATION OF     
+                                                       
+                           ****  ******  ****   ****   
+                          **  ** ****** **  ** ******  
+                          ******   **   **  ** **  **  
+                          **  **   **    ****  **  **  
+
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                DBCSR STATISTICS                             -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ COUNTER                                    TOTAL       BLAS       SMM       ACC
+ flops inhomo. stacks                           0       0.0%      0.0%      0.0%
+ flops total                         0.000000E+00       0.0%      0.0%      0.0%
+ flops max/rank                      0.000000E+00       0.0%      0.0%      0.0%
+ matmuls inhomo. stacks                         0       0.0%      0.0%      0.0%
+ matmuls total                                  0       0.0%      0.0%      0.0%
+ number of processed stacks                     0       0.0%      0.0%      0.0%
+ average stack size                                     0.0       0.0       0.0
+ marketing flops                     0.000000E+00
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                      DBCSR MESSAGE PASSING PERFORMANCE                      -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ ROUTINE             CALLS      AVE VOLUME [Bytes]
+ MP_Bcast                1                     12.
+ MP_Allreduce           19                     21.
+ -------------------------------------------------------------------------------
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                DBM STATISTICS                               -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+    M  x    N  x    K                                          COUNT     PERCENT
+ -------------------------------------------------------------------------------
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                GRID STATISTICS                              -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ LP    KERNEL             BACKEND                              COUNT     PERCENT
+ -------------------------------------------------------------------------------
+
+ MEMORY| Estimated peak process memory [MiB]                                 348
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                         MESSAGE PASSING PERFORMANCE                         -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+
+ ROUTINE             CALLS      AVE VOLUME [Bytes]
+ MP_Allreduce          422                      8.
+ -------------------------------------------------------------------------------
+
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                           R E F E R E N C E S                               -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ 
+ CP2K version 2023.2, the CP2K developers group (2023).
+ CP2K is freely available from https://www.cp2k.org/ .
+
+ Schuett, Ole; Messmer, Peter; Hutter, Juerg; VandeVondele, Joost. 
+ Electronic Structure Calculations on Graphics Processing Units, John
+ Wiley & Sons, Ltd, 173-190 (2016). 
+ GPU-Accelerated Sparse Matrix-Matrix Multiplication for
+ Linear Scaling Density Functional Theory.
+ https://doi.org/10.1002/9781118670712.ch8
+
+ Heinecke, A; Henry, G; Hutchinson, M; Pabst, H. 
+ Proceedings of Intl. Supercomputing Conference, 981-991 (2016). 
+ LIBXSMM: Accelerating Small Matrix Multiplications
+ by Runtime Code Generation.
+ https://doi.org/10.1109/SC.2016.83
+
+ Borstnik, U; VandeVondele, J; Weber, V; Hutter, J. 
+ PARALLEL COMPUTING, 40 (5-6), 47-58 (2014). 
+ Sparse matrix multiplication: The distributed block-compressed sparse
+ row library.
+ https://doi.org/10.1016/j.parco.2014.03.012
+
+ Hutter, J; Iannuzzi, M; Schiffmann, F; VandeVondele, J. 
+ WIREs Comput Mol Sci., 4 (1), 15-25 (2014). 
+ CP2K: atomistic simulations of condensed matter systems.
+ https://doi.org/10.1002/wcms.1159
+
+ Frigo, M; Johnson, SG. 
+ PROCEEDINGS OF THE IEEE, 93 (2), 216-231 (2005). 
+ The design and implementation of FFTW3.
+ https://doi.org/10.1109/JPROC.2004.840301
+
+ Perdew, JP; Burke, K; Ernzerhof, M. 
+ PHYSICAL REVIEW LETTERS, 77 (18), 3865-3868 (1996). 
+ Generalized gradient approximation made simple.
+ https://doi.org/10.1103/PhysRevLett.77.3865
+
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                T I M I N G                                  -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ SUBROUTINE                       CALLS  ASD         SELF TIME        TOTAL TIME
+                                MAXIMUM       AVERAGE  MAXIMUM  AVERAGE  MAXIMUM
+ CP2K                                 1  1.0    0.004    0.004    0.086    0.086
+ atom_code                            1  2.0    0.000    0.000    0.081    0.081
+ atom_energy_opt                      1  3.0    0.068    0.068    0.081    0.081
+ calculate_atom                       1  4.0    0.000    0.000    0.012    0.012
+ calculate_atom_restricted            1  5.0    0.005    0.005    0.012    0.012
+ calculate_atom_vxc_lda               6  6.0    0.006    0.006    0.007    0.007
+ -------------------------------------------------------------------------------
+
+ The number of warnings for this run is : 0
+ 
+ -------------------------------------------------------------------------------
+  **** **** ******  **  PROGRAM ENDED AT                 2025-09-08 16:25:08.094
+ ***** ** ***  *** **   PROGRAM RAN ON                   login-1.zaratan.umd.edu
+ **    ****   ******    PROGRAM RAN BY                                     jy246
+ ***** **    ** ** **   PROGRAM PROCESS ID                               1600898
+  **** **  *******  **  PROGRAM STOPPED IN /scratch/zt1/project/hzye-prj/user/jy
+                                           246/program/gth2upf/examples/C_gth_pb
+                                           e_q4
+
+  **** **** ******  **  PROGRAM STARTED AT               2025-09-08 16:34:00.272
+ ***** ** ***  *** **   PROGRAM STARTED ON               login-1.zaratan.umd.edu
+ **    ****   ******    PROGRAM STARTED BY                                 jy246
+ ***** **    ** ** **   PROGRAM PROCESS ID                               1603233
+  **** **  *******  **  PROGRAM STARTED IN /scratch/zt1/project/hzye-prj/user/jy
+                                           246/program/gth2upf/examples/C_gth_pb
+                                           e_q4
+
+ CP2K| version string:                                       CP2K version 2023.2
+ CP2K| source code revision number:                                             
+ CP2K| cp2kflags: ndebug omp libint fftw3 libxc parallel mpi_f08 scalapack cosma
+ CP2K|             xsmm spglib libvori libbqb
+ CP2K| is freely available from                            https://www.cp2k.org/
+ CP2K| Program compiled at                                   2024-07-17 15:05:20
+ CP2K| Program compiled on                              dev-a5-2.zaratan.umd.edu
+ CP2K| Program compiled for                                               x86_64
+ CP2K| Data directory path    /cvmfs/hpcsw.umd.edu/spack-software/2023.11.20/lin
+ CP2K| Input file name                                                     C.inp
+
+ GLOBAL| Method name                                                        ATOM
+ GLOBAL| Project name                                                          C
+ GLOBAL| Run type                                                   ENERGY_FORCE
+ GLOBAL| FFT library                                                       FFTW3
+ GLOBAL| Diagonalization library                                       ScaLAPACK
+ GLOBAL| DGEMM library                                                      BLAS
+ GLOBAL| Orthonormality check for eigenvectors                          DISABLED
+ GLOBAL| Matrix multiplication library                                     COSMA
+ GLOBAL| All-to-all communication in single precision                          F
+ GLOBAL| FFTs using library dependent lengths                                  F
+ GLOBAL| Grid backend                                                       AUTO
+ GLOBAL| Global print level                                               MEDIUM
+ GLOBAL| MPI I/O enabled                                                       T
+ GLOBAL| Total number of message passing processes                             1
+ GLOBAL| Number of threads for this process                                    1
+ GLOBAL| This output is from process                                           0
+ GLOBAL| Stack size for threads created by OpenMP (OMP_STACKSIZE)        default
+ GLOBAL| CPU model name                          AMD EPYC 7763 64-Core Processor
+ GLOBAL| CPUID                                                              1002
+
+ MEMORY| system memory details [Kb]
+ MEMORY|                        rank 0           min           max       average
+ MEMORY| MemTotal            527406024     527406024     527406024     527406024
+ MEMORY| MemFree             149323372     149323372     149323372     149323372
+ MEMORY| Buffers                391576        391576        391576        391576
+ MEMORY| Cached              181600912     181600912     181600912     181600912
+ MEMORY| Slab                 12065232      12065232      12065232      12065232
+ MEMORY| SReclaimable          8733152       8733152       8733152       8733152
+ MEMORY| MemLikelyFree       340049012     340049012     340049012     340049012
+
+
+ *** Fundamental physical constants (SI units) ***
+
+ *** Literature: B. J. Mohr and B. N. Taylor,
+ ***             CODATA recommended values of the fundamental physical
+ ***             constants: 2006, Web Version 5.1
+ ***             http://physics.nist.gov/constants
+
+ Speed of light in vacuum [m/s]                             2.99792458000000E+08
+ Magnetic constant or permeability of vacuum [N/A**2]       1.25663706143592E-06
+ Electric constant or permittivity of vacuum [F/m]          8.85418781762039E-12
+ Planck constant (h) [J*s]                                  6.62606896000000E-34
+ Planck constant (h-bar) [J*s]                              1.05457162825177E-34
+ Elementary charge [C]                                      1.60217648700000E-19
+ Electron mass [kg]                                         9.10938215000000E-31
+ Electron g factor [ ]                                     -2.00231930436220E+00
+ Proton mass [kg]                                           1.67262163700000E-27
+ Fine-structure constant                                    7.29735253760000E-03
+ Rydberg constant [1/m]                                     1.09737315685270E+07
+ Avogadro constant [1/mol]                                  6.02214179000000E+23
+ Boltzmann constant [J/K]                                   1.38065040000000E-23
+ Atomic mass unit [kg]                                      1.66053878200000E-27
+ Bohr radius [m]                                            5.29177208590000E-11
+
+ *** Conversion factors ***
+
+ [u] -> [a.u.]                                              1.82288848426455E+03
+ [Angstrom] -> [Bohr] = [a.u.]                              1.88972613288564E+00
+ [a.u.] = [Bohr] -> [Angstrom]                              5.29177208590000E-01
+ [a.u.] -> [s]                                              2.41888432650478E-17
+ [a.u.] -> [fs]                                             2.41888432650478E-02
+ [a.u.] -> [J]                                              4.35974393937059E-18
+ [a.u.] -> [N]                                              8.23872205491840E-08
+ [a.u.] -> [K]                                              3.15774647902944E+05
+ [a.u.] -> [kJ/mol]                                         2.62549961709828E+03
+ [a.u.] -> [kcal/mol]                                       6.27509468713739E+02
+ [a.u.] -> [Pa]                                             2.94210107994716E+13
+ [a.u.] -> [bar]                                            2.94210107994716E+08
+ [a.u.] -> [atm]                                            2.90362800883016E+08
+ [a.u.] -> [eV]                                             2.72113838565563E+01
+ [a.u.] -> [Hz]                                             6.57968392072181E+15
+ [a.u.] -> [1/cm] (wave numbers)                            2.19474631370540E+05
+ [a.u./Bohr**2] -> [1/cm]                                   5.14048714338585E+03
+ 
+ DBCSR| CPU Multiplication driver                                           XSMM (U)
+ DBCSR| Multrec recursion limit                                              512 (U)
+ DBCSR| Multiplication stack size                                           1000 (D)
+ DBCSR| Maximum elements for images                                    UNLIMITED (U)
+ DBCSR| Multiplicative factor virtual images                                   1 (U)
+ DBCSR| Use multiplication densification                                       T (D)
+ DBCSR| Multiplication size stacks                                             3 (U)
+ DBCSR| Use memory pool for CPU allocation                                     F (U)
+ DBCSR| Number of 3D layers                                               SINGLE (U)
+ DBCSR| Use MPI memory allocation                                              F (U)
+ DBCSR| Use RMA algorithm                                                      F (U)
+ DBCSR| Use Communication thread                                               T (U)
+ DBCSR| Communication thread load                                             87 (D)
+ DBCSR| MPI: My process id                                                     0
+ DBCSR| MPI: Number of processes                                               1
+ DBCSR| OMP: Current number of threads                                         1
+ DBCSR| OMP: Max number of threads                                             1
+ DBCSR| Split modifier for TAS multiplication algorithm                  1.0E+00 (U)
+
+
+
+                           ****  ******  ****   ****   
+                          **  ** ****** **  ** ******  
+                          ******   **   **  ** **  **  
+                          **  **   **    ****  **  **  
+                                                       
+                             University of Zurich      
+                                 2009 - 2015           
+                                                       
+                                 Version 0.0           
+                                                                   
+
+
+ Atomic Energy Calculation             Carbon [C]            Atomic number:    6
+
+
+ METHOD    | Restricted Kohn-Sham Calculation
+ METHOD    | Nonrelativistic Calculation
+ FUNCTIONAL| ROUTINE=DEFAULT
+ FUNCTIONAL| PBE:
+ FUNCTIONAL| J.P.Perdew, K.Burke, M.Ernzerhof, Phys. Rev. Letter, vol. 77, n 18,
+ FUNCTIONAL|  pp. 3865-3868, (1996){spin unpolarized}                           
+
+ Electronic structure
+    Total number of core electrons                                          2.00
+    Total number of valence electrons                                       4.00
+    Total number of electrons                                               6.00
+    Multiplicity                                                   not specified
+    S   [  2.00] 2.00
+    P      2.00
+
+
+ *******************************************************************************
+                  Iteration          Convergence                     Energy [au]
+ *******************************************************************************
+                          1        0.948238E-01                  -5.339291187021
+                          2        0.657788E-01                  -5.348564015259
+                          3        0.145237E-02                  -5.359214493259
+                          4        0.128677E-03                  -5.359218469807
+                          5        0.506747E-05                  -5.359218509918
+                          6        0.127574E-06                  -5.359218509990
+
+ Energy components [Hartree]           Total Energy ::           -5.359218509990
+                                        Band Energy ::           -1.398832248826
+                                     Kinetic Energy ::            3.376976526785
+                                   Potential Energy ::           -8.736195036775
+                                      Virial (-V/T) ::            2.586987196234
+                                        Core Energy ::           -8.317768955360
+                                          XC Energy ::           -1.413511601694
+                                     Coulomb Energy ::            4.372062047064
+                       Total Pseudopotential Energy ::          -11.694745482145
+                       Local Pseudopotential Energy ::          -12.341510522473
+                    Nonlocal Pseudopotential Energy ::            0.646765040328
+
+ Orbital energies  State     L     Occupation   Energy[a.u.]          Energy[eV]
+
+                       1     0          2.000      -0.505341          -13.751018
+
+                       1     1          2.000      -0.194076           -5.281063
+
+
+ Total Electron Density at R=0:                                         0.000000
+
+ Basis Set Condition Numbers: 2*covalent radius=  2.9102
+ Lattice constant:          2.619                Condition number:      100.0000
+ Lattice constant:          2.765                Condition number:      100.0000
+ Lattice constant:          2.910                Condition number:      100.0000
+ Lattice constant:          3.056                Condition number:      100.0000
+ Lattice constant:          3.201                Condition number:      100.0000
+ Lattice constant:          3.347                Condition number:       25.2121
+ Lattice constant:          3.492                Condition number:       21.3962
+ Lattice constant:          3.638                Condition number:       19.4637
+ Lattice constant:          3.783                Condition number:       17.7744
+ Lattice constant:            Inf                Condition number:       13.4458
+
+ Basis Set Completeness Estimates
+   L-quantum number:   0
+    Slater Exponent           Completeness n-qm= 1          Completeness n-qm= 2
+          11.400000                       1.000000                      1.000000
+          10.195833                       1.000000                      1.000000
+           8.991667                       1.000000                      1.000000
+           7.787500                       1.000000                      1.000000
+           6.583333                       1.000000                      1.000000
+           5.379167                       1.000000                      1.000000
+           4.175000                       1.000000                      1.000000
+           2.970833                       1.000000                      1.000000
+           1.766667                       1.000000                      1.000000
+           0.562500                       0.998157                      0.974418
+   L-quantum number:   1
+    Slater Exponent           Completeness n-qm= 2          Completeness n-qm= 3
+           2.250000                       1.000000                      0.999998
+           2.062500                       1.000000                      0.999998
+           1.875000                       1.000000                      0.999999
+           1.687500                       1.000000                      0.999999
+           1.500000                       1.000000                      0.999998
+           1.312500                       1.000000                      0.999999
+           1.125000                       1.000000                      0.999998
+           0.937500                       0.999995                      0.999769
+           0.750000                       0.999393                      0.991749
+           0.562500                       0.984651                      0.909159
+
+
+                             NORMAL TERMINATION OF     
+                                                       
+                           ****  ******  ****   ****   
+                          **  ** ****** **  ** ******  
+                          ******   **   **  ** **  **  
+                          **  **   **    ****  **  **  
+
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                DBCSR STATISTICS                             -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ COUNTER                                    TOTAL       BLAS       SMM       ACC
+ flops inhomo. stacks                           0       0.0%      0.0%      0.0%
+ flops total                         0.000000E+00       0.0%      0.0%      0.0%
+ flops max/rank                      0.000000E+00       0.0%      0.0%      0.0%
+ matmuls inhomo. stacks                         0       0.0%      0.0%      0.0%
+ matmuls total                                  0       0.0%      0.0%      0.0%
+ number of processed stacks                     0       0.0%      0.0%      0.0%
+ average stack size                                     0.0       0.0       0.0
+ marketing flops                     0.000000E+00
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                      DBCSR MESSAGE PASSING PERFORMANCE                      -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ ROUTINE             CALLS      AVE VOLUME [Bytes]
+ MP_Bcast                1                     12.
+ MP_Allreduce           19                     21.
+ -------------------------------------------------------------------------------
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                DBM STATISTICS                               -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+    M  x    N  x    K                                          COUNT     PERCENT
+ -------------------------------------------------------------------------------
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                GRID STATISTICS                              -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ LP    KERNEL             BACKEND                              COUNT     PERCENT
+ -------------------------------------------------------------------------------
+
+ MEMORY| Estimated peak process memory [MiB]                                 349
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                         MESSAGE PASSING PERFORMANCE                         -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+
+ ROUTINE             CALLS      AVE VOLUME [Bytes]
+ MP_Allreduce          422                      8.
+ -------------------------------------------------------------------------------
+
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                           R E F E R E N C E S                               -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ 
+ CP2K version 2023.2, the CP2K developers group (2023).
+ CP2K is freely available from https://www.cp2k.org/ .
+
+ Schuett, Ole; Messmer, Peter; Hutter, Juerg; VandeVondele, Joost. 
+ Electronic Structure Calculations on Graphics Processing Units, John
+ Wiley & Sons, Ltd, 173-190 (2016). 
+ GPU-Accelerated Sparse Matrix-Matrix Multiplication for
+ Linear Scaling Density Functional Theory.
+ https://doi.org/10.1002/9781118670712.ch8
+
+ Heinecke, A; Henry, G; Hutchinson, M; Pabst, H. 
+ Proceedings of Intl. Supercomputing Conference, 981-991 (2016). 
+ LIBXSMM: Accelerating Small Matrix Multiplications
+ by Runtime Code Generation.
+ https://doi.org/10.1109/SC.2016.83
+
+ Borstnik, U; VandeVondele, J; Weber, V; Hutter, J. 
+ PARALLEL COMPUTING, 40 (5-6), 47-58 (2014). 
+ Sparse matrix multiplication: The distributed block-compressed sparse
+ row library.
+ https://doi.org/10.1016/j.parco.2014.03.012
+
+ Hutter, J; Iannuzzi, M; Schiffmann, F; VandeVondele, J. 
+ WIREs Comput Mol Sci., 4 (1), 15-25 (2014). 
+ CP2K: atomistic simulations of condensed matter systems.
+ https://doi.org/10.1002/wcms.1159
+
+ Frigo, M; Johnson, SG. 
+ PROCEEDINGS OF THE IEEE, 93 (2), 216-231 (2005). 
+ The design and implementation of FFTW3.
+ https://doi.org/10.1109/JPROC.2004.840301
+
+ Perdew, JP; Burke, K; Ernzerhof, M. 
+ PHYSICAL REVIEW LETTERS, 77 (18), 3865-3868 (1996). 
+ Generalized gradient approximation made simple.
+ https://doi.org/10.1103/PhysRevLett.77.3865
+
+
+ -------------------------------------------------------------------------------
+ -                                                                             -
+ -                                T I M I N G                                  -
+ -                                                                             -
+ -------------------------------------------------------------------------------
+ SUBROUTINE                       CALLS  ASD         SELF TIME        TOTAL TIME
+                                MAXIMUM       AVERAGE  MAXIMUM  AVERAGE  MAXIMUM
+ CP2K                                 1  1.0    0.016    0.016    0.170    0.170
+ atom_code                            1  2.0    0.000    0.000    0.154    0.154
+ atom_energy_opt                      1  3.0    0.141    0.141    0.154    0.154
+ calculate_atom                       1  4.0    0.000    0.000    0.012    0.012
+ calculate_atom_restricted            1  5.0    0.005    0.005    0.012    0.012
+ calculate_atom_vxc_lda               6  6.0    0.006    0.006    0.007    0.007
+ -------------------------------------------------------------------------------
+
+ The number of warnings for this run is : 0
+ 
+ -------------------------------------------------------------------------------
+  **** **** ******  **  PROGRAM ENDED AT                 2025-09-08 16:34:01.338
+ ***** ** ***  *** **   PROGRAM RAN ON                   login-1.zaratan.umd.edu
+ **    ****   ******    PROGRAM RAN BY                                     jy246
+ ***** **    ** ** **   PROGRAM PROCESS ID                               1603233
+  **** **  *******  **  PROGRAM STOPPED IN /scratch/zt1/project/hzye-prj/user/jy
+                                           246/program/gth2upf/examples/C_gth_pb
+                                           e_q4

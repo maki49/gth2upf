@@ -1,9 +1,6 @@
 __pycache__
 debug.py
-*.inp
 *.log
-*.out
-*.upf
 *.orb
 *.png
 *GTH
