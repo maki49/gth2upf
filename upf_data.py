@@ -21,6 +21,7 @@ class UPFData:
         self.tcoulombp = False
         self.nlcc = False
         self.dft = ""
+        self.has_so = False
         
         # Basic parameters
         self.zp = 0.0
@@ -53,7 +54,7 @@ class UPFData:
         # Beta functions
         self.nbeta = 0
         self.els_beta = []
-        self.lll = []
+        self.lll = []   # angular momentums of beta functions
         self.kbeta = []
         self.kkbeta = 0
         self.beta = None
@@ -61,10 +62,15 @@ class UPFData:
         self.rcut = []
         self.rcutus = []
         
+        # SOC nonlocal
+        self.jjj = []
+        self.beta_index = []    # 每个 beta 的 index（若提供）
+        self.dion_so = None     # 额外的 SOC 矩阵（若提供）
+        
         # Atomic wavefunctions and density
         self.chi = None
         self.rho_at = None
-        
+        self.jchi = []  # j of each PSWFC
         # tolerance
         self.rtol = 1e-6
         self.atol = 1e-6
@@ -137,6 +143,20 @@ class UPFData:
 
 
 import re
+def _bool_from_str(s: str) -> bool:
+    if s is None:
+        return False
+    s = s.strip().lower()
+    if s in ("t", "true", ".true."):
+        return True
+    if s in ("f", "false", ".false."):
+        return False
+    # 兼容 1/0
+    if s in ("1", "yes", "y"):
+        return True
+    if s in ("0", "no", "n"):
+        return False
+    return False
 
 def read_upf_file(filename):
     """Read UPF pseudopotential file and return UPFData object
@@ -220,13 +240,15 @@ def read_upf_file(filename):
                 elif attr == 'relativistic':
                     upf_data.rel = value
                 elif attr == 'is_ultrasoft':
-                    upf_data.tvanp = value.upper() == 'T'
+                    upf_data.tvanp = _bool_from_str(value)
                 elif attr == 'is_paw':
-                    upf_data.tpawp = value.upper() == 'T'
+                    upf_data.tpawp = _bool_from_str(value)
                 elif attr == 'is_coulomb':
-                    upf_data.tcoulombp = value.upper() == 'T'
+                    upf_data.tcoulombp = _bool_from_str(value)
+                elif attr == 'has_so':
+                    upf_data.has_so = _bool_from_str(value)
                 elif attr == 'core_correction':
-                    upf_data.nlcc = value.upper() == 'T'
+                    upf_data.nlcc = _bool_from_str(value)
                 elif attr == 'functional':
                     upf_data.dft = value
                 elif attr == 'z_valence':
@@ -306,22 +328,58 @@ def read_upf_file(filename):
     nonlocal_match = re.search(r'<PP_NONLOCAL>(.*?)</PP_NONLOCAL>', content, re.DOTALL)
     if nonlocal_match:
         nonlocal_content = nonlocal_match.group(1)
-        # Parse angular momentums
-        l_matches = re.findall(r'angular_momentum="([^"]+)"', nonlocal_content)
-        if l_matches:
-            upf_data.lll = np.array([int(l) for l in l_matches])
-            assert(len(upf_data.lll) == upf_data.nbeta)
-            assert(max(upf_data.lll) <= upf_data.lmax)
-        # Parse beta functions
-        beta_matches = re.findall(r'<PP_BETA[^>]*>([^<]+)</PP_BETA[^>]*>', nonlocal_content, re.DOTALL)
-        if beta_matches:
-            upf_data.beta = []
-            for beta_data in beta_matches:
-                beta_values = []
-                for line in beta_data.strip().split('\n'):
-                    if line.strip():
-                        beta_values.extend([float(x) for x in line.split()])
-                upf_data.beta.append(np.array(beta_values))
+        # 解析所有 PP_BETA（带属性）
+        upf_data.beta = []
+        upf_data.lll = []
+        upf_data.kbeta = []
+        upf_data.jjj = []
+        upf_data.beta_index = []
+
+        # note for re.findall and re.finditer
+        """
+        s = "a1 b22 c333"
+
+        # findall：直接拿到匹配格式的内容
+        re.findall(r'([a-z])(\d+)', s)
+        # => [('a','1'), ('b','22'), ('c','333')]
+
+        # finditer：拿到被匹配的组(与每个括号()中格式分别对应的那部分内容)，可取位置信息（span）
+        for m in re.finditer(r'([a-z])(\d+)', s):
+            print(m.group(0), m.group(1), m.group(2), m.span())
+            # => a1 a 1 (0,2) ...
+        """
+        beta_iter = re.finditer(r'<PP_BETA(?:\.\d+)?([^>]*)>(.*?)</PP_BETA(?:\.\d+)?>', nonlocal_content, re.DOTALL)
+        for m in beta_iter:
+            attrs = m.group(1)
+            body = m.group(2).strip()
+            
+            # l
+            l_m = re.search(r'angular_momentum="([^"]+)"', attrs)
+            upf_data.lll.append(int(l_m.group(1)) if l_m else 0)
+            # size / cutoff_radius_index
+            size_m = re.search(r'size="([^"]+)"', attrs)
+            cri_m = re.search(r'cutoff_radius_index="([^"]+)"', attrs)
+            kb = int(size_m.group(1)) if size_m else (int(cri_m.group(1)) if cri_m else upf_data.grid.mesh)
+            upf_data.kbeta.append(kb)
+            # index（可选）
+            idx_m = re.search(r'index="([^"]+)"', attrs)
+            upf_data.beta_index.append(int(idx_m.group(1)) if idx_m else len(upf_data.kbeta))
+            # j（FR+SOC 可选）
+            j_m = re.search(r' j="([^"]+)"', attrs)
+            upf_data.jjj.append(float(j_m.group(1)) if j_m else None)
+            # 数据
+            vals = []
+            for line in body.splitlines():
+                line = line.strip()
+                if line:
+                    vals.extend([float(x) for x in line.split()])
+            upf_data.beta.append(np.array(vals))
+        upf_data.nbeta = max(upf_data.nbeta, len(upf_data.beta))
+        # kkbeta 取每个投影子的径向长度最大值
+        upf_data.kkbeta = max(upf_data.kbeta) if upf_data.kbeta else 0
+        # 安全检查：lll 长度与 nbeta 一致
+        if upf_data.nbeta > 0 and len(upf_data.lll) == upf_data.nbeta:
+            upf_data.lll = np.array(upf_data.lll, dtype=int)
         # Parse D matrix
         dij_match = re.search(r'<PP_DIJ[^>]*>([^<]+)</PP_DIJ>', nonlocal_content, re.DOTALL)
         if dij_match:
@@ -330,22 +388,37 @@ def read_upf_file(filename):
             for line in dij_data.split('\n'):
                 if line.strip():
                     dij_values.extend([float(x) for x in line.split()])
-            # Reshape to square matrix
             n = int(np.sqrt(len(dij_values)))
             upf_data.dion = np.array(dij_values).reshape(n, n)
-    if upf_data.nbeta > 0:
-        upf_data.kbeta=np.ones(upf_data.nbeta, dtype=int)*upf_data.grid.mesh
+        # 额外的 SOC 矩阵（若存在）
+        dij_so_match = re.search(r'<PP_DIJ_SO[^>]*>([^<]+)</PP_DIJ_SO>', nonlocal_content, re.DOTALL)
+        if dij_so_match:
+            dij_data = dij_so_match.group(1).strip()
+            dij_values = []
+            for line in dij_data.split('\n'):
+                if line.strip():
+                    dij_values.extend([float(x) for x in line.split()])
+            n = int(np.sqrt(len(dij_values)))
+            upf_data.dion_so = np.array(dij_values).reshape(n, n)
         
     # Parse PP_PSWFC section (pseudo wavefunctions)
     pswfc_match = re.search(r'<PP_PSWFC>(.*?)</PP_PSWFC>', content, re.DOTALL)
     if pswfc_match:
         pswfc_content = pswfc_match.group(1)
         # Parse angular momentums
-        l_matches = re.findall(r' l="([^"]+)"', pswfc_content)  # avoid "label="
+        # l_matches = re.findall(r' l="([^"]+)"', pswfc_content)  # avoid "label="
+        # 确保 l= 前面是空白或“<”
+        # (?:...) 是非捕获组，表示匹配但不捕获该部分
+        # (?<=\s)：正向肯定回溯，要求 l 前一位是空白字符（空格/制表/换行等）。只检查“紧挨着”的一个字符。
+        # “|” 是分支或
+        l_matches = re.findall(r'(?:(?<=\s)|(?<=<))l="([^"]+)"', pswfc_content)
         if l_matches:
             upf_data.lchi = np.array([int(l) for l in l_matches])
             assert(len(upf_data.lchi) == upf_data.nwfc)
-            # assert(max(upf_data.lchi) <= upf_data.lmax)
+        # Parse j (if present)
+        j_matches = re.findall(r'(?:(?<=\s)|(?<=<))j="([^"]+)"', pswfc_content)
+        if j_matches and len(j_matches) == upf_data.nwfc:
+            upf_data.jchi = [float(j) for j in j_matches]
         # Parse occupations
         oc_matches = re.findall(r'occupation="([^"]+)"', pswfc_content)
         if oc_matches:
@@ -399,9 +472,12 @@ def write_upf_v2(upf: UPFData, filename: str):
         # PP_INFO
         f.write('  <PP_INFO>\n')
         f.write(upf.info)
+        if not upf.info.endswith('\n'):
+            f.write('\n')
         f.write('  </PP_INFO>\n')
         
         # PP_HEADER
+        tb = (lambda b: 'T' if b else 'F')
         f.write('  <PP_HEADER\n')
         f.write(f'    generated="{upf.generated}"\n')
         f.write(f'    author="{upf.author}"\n')
@@ -410,14 +486,14 @@ def write_upf_v2(upf: UPFData, filename: str):
         f.write(f'    element="{upf.psd}"\n')
         f.write(f'    pseudo_type="{upf.typ}"\n')
         f.write(f'    relativistic="{upf.rel}"\n')
-        f.write(f'    is_ultrasoft="{str(upf.tvanp).lower()}"\n')
-        f.write(f'    is_paw="{str(upf.tpawp).lower()}"\n')
-        f.write(f'    is_coulomb="{str(upf.tcoulombp).lower()}"\n')
-        f.write(f'    has_so="false"\n')
-        f.write(f'    has_wfc="true"\n')
-        f.write(f'    has_gipaw="false"\n')
-        f.write(f'    paw_as_gipaw="false"\n')
-        f.write(f'    core_correction="{str(upf.nlcc).lower()}"\n')
+        f.write(f'    is_ultrasoft="{tb(upf.tvanp)}"\n')
+        f.write(f'    is_paw="{tb(upf.tpawp)}"\n')
+        f.write(f'    is_coulomb="{tb(upf.tcoulombp)}"\n')
+        f.write(f'    has_so="{tb(upf.has_so)}"\n')
+        f.write(f'    has_wfc="T"\n')
+        f.write(f'    has_gipaw="F"\n')
+        f.write(f'    paw_as_gipaw="F"\n')
+        f.write(f'    core_correction="{tb(upf.nlcc)}"\n')
         f.write(f'    functional="{upf.dft}"\n')
         f.write(f'    z_valence="{upf.zp:.10f}"\n')
         f.write(f'    total_psenergy="{upf.etotps:.10f}"\n')
@@ -481,20 +557,25 @@ def write_upf_v2(upf: UPFData, filename: str):
             f.write('  <PP_NONLOCAL>\n')
             
             for i in range(upf.nbeta):
-                f.write(f'    <PP_BETA.{i+1} type="real" size="{upf.kbeta[i]}" columns="4" ')
-                f.write(f'angular_momentum="{upf.lll[i]}" cutoff_radius_index="{upf.kbeta[i]}" ')
-                # f.write(f'cutoff_radius="{upf.rcut[i]:.10f}" ultrasoft_cutoff_radius="{upf.rcutus[i]:.10f}"')
-                f.write('>\n')
+                # 构造 PP_BETA 标签（包含 size、angular_momentum、cutoff_radius_index、index、j）
+                kb = upf.kbeta[i] if i < len(upf.kbeta) and upf.kbeta[i] else (upf.grid.mesh if upf.beta is None else len(upf.beta[i]))
+                lval = upf.lll[i] if i < len(upf.lll) else 0
+                idx = upf.beta_index[i] if i < len(upf.beta_index) and upf.beta_index[i] else (i+1)
+                jstr = ''
+                if upf.has_so and i < len(upf.jjj) and upf.jjj[i] is not None:
+                    jstr = f' j="{upf.jjj[i]:g}"'
+                f.write(f'    <PP_BETA.{i+1} type="real" size="{kb}" columns="4" index="{idx}" angular_momentum="{lval}" cutoff_radius_index="{kb}"{jstr}>\n')
                 
-                for ir in range(0, upf.kbeta[i], 4):
+                for ir in range(0, kb, 4):
                     line = '      '
                     for j in range(4):
-                        if ir+j < upf.kbeta[i]:
+                        if ir+j < kb:
                             line += f'{upf.beta[i][ir+j]:18.11e} '
                     f.write(line.rstrip() + '\n')
                 
                 f.write(f'    </PP_BETA.{i+1}>\n')
             
+            # 主 DIJ
             f.write('    <PP_DIJ type="real" size="{}" columns="4">\n'.format(upf.nbeta * upf.nbeta))
             for i in range(upf.nbeta):
                 for j in range(0, upf.nbeta, 4):
@@ -505,6 +586,18 @@ def write_upf_v2(upf: UPFData, filename: str):
                     f.write(line.rstrip() + '\n')
             f.write('    </PP_DIJ>\n')
             
+            # 额外 SOC 矩阵（若有）
+            if upf.has_so and upf.dion_so is not None:
+                f.write('    <PP_DIJ_SO type="real" size="{}" columns="4">\n'.format(upf.nbeta * upf.nbeta))
+                for i in range(upf.nbeta):
+                    for j in range(0, upf.nbeta, 4):
+                        line = '      '
+                        for k in range(4):
+                            if j+k < upf.nbeta:
+                                line += f'{upf.dion_so[i, j+k]:18.11e} '
+                        f.write(line.rstrip() + '\n')
+                f.write('    </PP_DIJ_SO>\n')
+            
             f.write('  </PP_NONLOCAL>\n')
         
         # PP_PSWFC
@@ -512,13 +605,10 @@ def write_upf_v2(upf: UPFData, filename: str):
             f.write('  <PP_PSWFC>\n')
             
             for i in range(upf.nwfc):
-                f.write(f'    <PP_CHI.{i+1} type="real" size="{upf.grid.mesh}" columns="4" ')
-                # f.write(f'label="{upf.els[i]}"')
-                f.write(f'l="{upf.lchi[i]}" occupation="{upf.oc[i]:.10f}" ')
-                # f.write(f'n="{upf.nchi[i]}"')
-                f.write(f' pseudo_energy="{upf.epseu[i]:.10f}"')
-                # f.write(f' cutoff_radius="{upf.rcut_chi[i]:.10f}" ultrasoft_cutoff_radius="{upf.rcutus_chi[i]:.10f}"')
-                f.write('>\n')
+                jattr = ''
+                if upf.has_so and i < len(upf.jchi) and upf.jchi[i] is not None:
+                    jattr = f' j="{upf.jchi[i]:g}"'
+                f.write(f'    <PP_CHI.{i+1} type="real" size="{upf.grid.mesh}" columns="4" l="{upf.lchi[i]}"{jattr} occupation="{upf.oc[i]:.10f}"  pseudo_energy="{upf.epseu[i]:.10f}">\n')
                 
                 for ir in range(0, upf.grid.mesh, 4):
                     line = '      '
@@ -547,13 +637,13 @@ import numpy as np
 
 
 def rwtest(upf_ref, upf_wr):
-    if upf_ref == upf_wr:
+    from debug.test_helper import print_dict_mismatches 
+    mismatches = print_dict_mismatches(upf_ref.__dict__, upf_wr.__dict__)
+    if(len(mismatches) == 0):
         print('RW test passed')
     else:
-        print(f'RW test faild, ref=', upf_ref.__dict__)
-        print(f'result=', upf_wr.__dict__)
-    
-        
+        print('RW test failed, mismatches in keys:', mismatches)
+
 if __name__ == '__main__':
     """for read-and-write (RW) test, usage: python upf_data.py <upf_file_in> <upf_file_out>"""
     import sys, os
@@ -561,7 +651,6 @@ if __name__ == '__main__':
     wfile = sys.argv[2]
     print("read file:", rfile)
     upf_ref = read_upf_file(rfile)
-    # print("ref=", upf_ref.__dict__)
     write_upf_v2(upf_ref, wfile)
     assert(os.path.exists(wfile))
     upf_wr = read_upf_file(wfile)

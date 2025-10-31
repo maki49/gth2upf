@@ -1,0 +1,9 @@
+{
+    "cp2k_path": "/home/fortneu49/cp2k",
+    "element": "W",
+    "xc": "PBE",
+    "valence": 14,
+    "prefix": "W-SOC-GTH-PBE-cp2k-default",
+    "soc": true,
+    "cp2k_type": "ssmp"
+}

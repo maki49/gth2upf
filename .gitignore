@@ -1,6 +1,19 @@
 __pycache__
+<<<<<<< HEAD
 debug.py
+=======
+debug/
+test/code_ref/
+*.inp
+>>>>>>> develop
 *.log
 *.orb
 *.png
+<<<<<<< HEAD
 *GTH
+=======
+*.pdf
+*.html
+*.txt
+*GTH*
+>>>>>>> develop

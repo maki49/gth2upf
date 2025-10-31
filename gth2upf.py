@@ -49,8 +49,7 @@ def gen_cp2k_input(data):
       
     str_valence ="CORE "+' '.join(valence)
     
-    cp2k_inp_content=f"""
-&GLOBAL
+    cp2k_inp_content=f"""&GLOBAL
   PROJECT {element}
   PROGRAM_NAME ATOM
 &END GLOBAL
@@ -67,7 +66,7 @@ def gen_cp2k_input(data):
   &END METHOD
   &PRINT
     &ANALYZE_BASIS
-         OVERLAP_CONDITION_NUMBER T
+         ! OVERLAP_CONDITION_NUMBER T   # not available for lmax > 2
          COMPLETENESS T
     &END ANALYZE_BASIS
     &UPF_FILE
@@ -102,7 +101,8 @@ def postprocess(data):
 
 def gen_single_upf(data):
     inp = gen_cp2k_input(data)
-    run_cp2k(data['cp2k_path'], inp)
+    cp2k_type = data.get('cp2k_type', 'popt')
+    run_cp2k(data['cp2k_path'], inp, cp2k_type=cp2k_type)
     postprocess(data)
     
 def main(file_path):
