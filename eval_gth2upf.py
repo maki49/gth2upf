@@ -4,6 +4,7 @@ import numpy
 from math import log, exp
 import sys
 from gth_tools import parse_gth_pp, V_loc, p_il
+from grid import GridCPMD2UPF
 
 def eval_gth2upf(element, gthdata, zmesh=None, 
             xmin=-7.00, rmax_init=100.0, dx=0.0125, upf_file=None):

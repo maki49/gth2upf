@@ -100,6 +100,9 @@ def postprocess(data):
     
     upf = read_upf_file(outfile)
     upf = upf.correct_lmax().correct_zmesh()
+    rel = {True: "full", False: "scalar"}
+    upf.rel = rel[upf.has_so]
+    upf.dft = data['xc'].upper()
     quadrature = data.setdefault('quadrature', 'GC_LOG')
     if quadrature.upper() == 'CPMD2UPF_DEFAULT':
         gth_header, gth_content = find_pseudo_content(data.setdefault('gth_path', 'GTH_POTENTIALS'),
