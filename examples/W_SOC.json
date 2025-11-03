@@ -1,10 +1,10 @@
 {
-    "cp2k_path": "/home/fortneu49/cp2k",
+    "cp2k_path": "/mnt/work/hack/cp2k/exe/local/cp2k.psmp",
+    "gth_path": "/mnt/work/hack/cp2k/data/GTH_SOC_POTENTIALS",
     "element": "W",
     "xc": "PBE",
     "valence": 14,
-    "prefix": "W-SOC-GTH-PBE",
+    "prefix": "W-SOC-GTH-PBE-eval",
     "grid_points": 500,
-    "quadrature": "cpmd2upf_default",
-    "soc": true
+    "quadrature": "cpmd2upf_default"
 }

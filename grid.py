@@ -1,57 +1,33 @@
 from math import log, exp
 import numpy as np
+from dataclasses import dataclass
 
+@dataclass
 class Grid:
-    def __init__(self, zmesh=1, r=None, gen_default=True):
-        self.zmesh = zmesh
-        self.r = None
-        self.mesh = 0   # number of radial grid points
-        self.dx = 0.0
-        self.rab = None
-        self.rmax = 0.0
-        self.xmin = 0.0
-        if r is not None and len(r) > 1:
-            self.r = r
-            self.mesh = len(r)
-            self.dx = log(self.r[1]/self.r[0])
-        elif not gen_default:
-            return
-        else:
-            self.default_grid_cpmd2upf(self.zmesh)
+    zmesh: int = 1
+    r: np.ndarray = None
+    mesh: int = 0   # number of radial grid points
+    dx: float = 0.0
+    rab: np.ndarray = None
+    rmax: float = 0.0
+    xmin: float = 0.0
+
+class GridCPMD2UPF(Grid): 
+    def __init__(self, zmesh=1, xmin=-7.00, rmax_init=100.0, dx=0.0125):
+        super().__init__(zmesh=zmesh, rmax=rmax_init, dx=dx, xmin=xmin)
+        self.rmax_init = rmax_init
+
+        self.gen_grid(self.zmesh)
+
         self.rab = self.r * self.dx
         self.rmax = self.r[-1]
         self.xmin = log(self.zmesh * self.r[0])
     
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, Grid):
-            return False
-        return  (self.mesh == other.mesh and
-                self.dx == other.dx and
-                self.xmin == other.xmin and
-                self.rmax == other.rmax and
-                np.allclose(self.r, other.r, rtol=1e-6, atol=1e-6) and
-                np.allclose(self.rab, other.rab, rtol=1e-6, atol=1e-6))
-     
-    # Check grid consistency
-    def check_grid_consistency(self):
-        for i in range(1, min(10, self.mesh)):
-            expected = self.r[0] * exp(i * self.dx)
-            if abs(self.r[i] - expected) > 1e-6 * expected:
-                print(f"Warning: grid point {i} deviates from logarithmic")
-                break
-            
-    # Default grid in cpmd2upf
-    def default_grid_cpmd2upf(self, z:int):
-        self.xmin = -7.0
-        self.dx = 0.0125
-        self.rmax = 100.0
-        print("Using default radial grid:")
-        print(f"r_i = exp(xmin+(i-1)*dx)/Z, with Z={z}, xmin={self.xmin}, dx={self.dx}, rmax={self.rmax}")
-        
-        self.mesh = 1 + int((log(z * self.rmax) - self.xmin) / self.dx)
+    def gen_grid(self, zmesh):
+        "r_i = 1/zmesh * exp(xmin + i * dx)"
+        self.mesh = 1 + int((log(zmesh * self.rmax_init) - self.xmin) / self.dx)
         self.mesh = (self.mesh // 2) * 2 + 1  # Make odd
         self.r = np.zeros(self.mesh)
         for i in range(self.mesh):
-            self.r[i] = exp(self.xmin + i * self.dx) / z        
-        print(f"{self.mesh} grid points, rmax={self.r[-1]:.4f}")
-    
+            self.r[i] = exp(self.xmin + i * self.dx) / zmesh
+

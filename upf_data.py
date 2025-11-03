@@ -1,5 +1,5 @@
 from element_list import ElementList
-from grid import Grid
+from grid import Grid, GridCPMD2UPF
 
 class UPFData:
     """Class to hold UPF pseudopotential data"""
@@ -47,9 +47,7 @@ class UPFData:
         
         # Potentials and densities
         self.rho_atc = None
-        self.rcloc = 0.0
         self.vloc = None
-        self.vnl = None
         
         # Beta functions
         self.nbeta = 0
@@ -112,15 +110,6 @@ class UPFData:
         if self.grid is None:
             self.grid = Grid(zmesh=zmesh)
             
-        # Helper function to pad/trim array to match grid mesh size
-        def pad_at_last(v): # used for the same grid type
-            if v is None:
-                return None
-            v = np.asarray(v)
-            if len(v) < self.grid.mesh:
-                # Pad with zeros
-                return np.pad(v, (0, self.grid.mesh - len(v)))
-            return v[:self.grid.mesh]
         def interpolate(v): # used for the different grid type
             if v is None:
                 return None
@@ -141,6 +130,67 @@ class UPFData:
             self.chi = [interpolate(c) for c in self.chi]
         return self
 
+    def replace_grid_by_eval(self, gth_content: str, grid_new:Grid = None):
+        from gth_tools import parse_gth_pp, V_loc, p_il
+        from eval_gth2upf import combine_channels, combine_channels_soc
+        gth = parse_gth_pp(gth_content)
+
+        r_old = self.grid.r.copy() # used for interpolation
+        
+        # replace the grid
+        if grid_new is None:
+            self.grid = GridCPMD2UPF(zmesh=self.grid.zmesh) # use default grid in cpmd2upf
+        else:
+            self.grid = grid_new
+            
+        # evaluate the local part
+        self.vloc = V_loc(self.grid.r, Z_ion=gth.local.Z_ion, r_loc=gth.local.r_loc,
+                 C1=gth.local.C[0], C2=gth.local.C[1],
+                 C3=gth.local.C[2], C4=gth.local.C[3]) * 2 # A.U. to Ry
+        
+        # evaluate the nonlocal projectors
+        proj_list = []
+        for ch in gth.channels:
+            for i in range(ch.m):
+                proj = p_il(self.grid.r, ch.l, i+1, ch.r_l) * self.grid.r * 2
+                proj_list.append((proj, ch.l))
+                if self.has_so and ch.l >=1: #append again
+                    proj_list.append((proj, ch.l))
+        self.nbeta = len(proj_list)
+        beta = np.zeros((self.nbeta, self.grid.mesh), dtype=float)
+        lll = np.zeros(self.nbeta, dtype=int)
+        kbeta = np.zeros(self.nbeta, dtype=int)
+        for i in range(self.nbeta):
+            lll[i] = proj_list[i][1]
+            beta[i] = proj_list[i][0]
+            kbeta[i] = self.grid.mesh
+        self.lll = lll
+        self.beta = beta
+        self.kbeta = kbeta
+        self.kkbeta = max(kbeta)
+        
+        # check and replace dij (should be 2 times of cp2k-generated upf, due to Ry unit)
+        if self.has_so:
+            dij = combine_channels_soc(gth.channels, gth.soc_channels)
+        else:
+            dij, _ = combine_channels(gth.channels)
+        # compare: dij/2 is close to self.dion
+        assert np.allclose(dij / 2, self.dion), "dij/2 is not close to self.dion"
+        # print("dij eval:", dij)
+        # print("dij read from cp2k-generated upf:", self.dion)
+        self.dion = dij
+        
+        #interpolate rho_at, rho_atc and chi functions
+        def interpolate(v): # used for the different grid type
+            if v is None:
+                return None
+            assert(len(v) == len(r_old))
+            return np.interp(self.grid.r, r_old, v)
+        self.rho_at = interpolate(self.rho_at)
+        self.rho_atc = interpolate(self.rho_atc)
+        if self.chi is not None:
+            self.chi = [interpolate(c) for c in self.chi]
+        return self
 
 import re
 def _bool_from_str(s: str) -> bool:
@@ -168,7 +218,7 @@ def read_upf_file(filename):
         UPFData: Parsed UPF data
     """
     upf_data = UPFData()
-    upf_data.grid = Grid(gen_default=False) # read as provided
+    upf_data.grid = Grid() # read as provided
     
     with open(filename, 'r') as f:
         content = f.read()
@@ -414,7 +464,7 @@ def read_upf_file(filename):
         l_matches = re.findall(r'(?:(?<=\s)|(?<=<))l="([^"]+)"', pswfc_content)
         if l_matches:
             upf_data.lchi = np.array([int(l) for l in l_matches])
-            assert(len(upf_data.lchi) == upf_data.nwfc)
+            upf_data.nwfc = len(upf_data.lchi)  # 以实际读入的个数为准
         # Parse j (if present)
         j_matches = re.findall(r'(?:(?<=\s)|(?<=<))j="([^"]+)"', pswfc_content)
         if j_matches and len(j_matches) == upf_data.nwfc:
