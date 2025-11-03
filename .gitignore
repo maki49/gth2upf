@@ -1,6 +1,12 @@
 __pycache__
-debug.py
+debug/
+draft/
+test/code_ref/
+*.inp
 *.log
 *.orb
 *.png
-*GTH
+*.pdf
+*.html
+*.txt
+*GTH*

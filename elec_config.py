@@ -28,7 +28,8 @@ electron_configurations = {
     'Fe': ['Ar', '4s2', '3d6'],
     'Co': ['Ar', '4s2', '3d7'],
     'Ni': ['Ar', '4s2', '3d8'],
-    'Cu': ['Ar', '4s1', '3d10'],
+    # 'Cu': ['Ar', '4s1', '3d10'],  # Free Cu atom, following the aufbau principle
+    'Cu': ['Ar', '4s2', '3d9'],  # For ppotential generation, use 4s2 3d9
     'Zn': ['Ar', '4s2', '3d10'],
     'Ga': ['Ar', '4s2', '3d10', '4p1'],
     'Ge': ['Ar', '4s2', '3d10', '4p2'],
@@ -46,7 +47,8 @@ electron_configurations = {
     'Ru': ['Kr', '5s1', '4d7'],
     'Rh': ['Kr', '5s1', '4d8'],
     'Pd': ['Kr', '5s0', '4d10'],
-    'Ag': ['Kr', '5s1', '4d10'],
+    # 'Ag': ['Kr', '5s1', '4d10'],
+    'Ag': ['Kr', '5s2', '4d9'],
     'Cd': ['Kr', '5s2', '4d10'],
     'In': ['Kr', '5s2', '4d10', '5p1'],
     'Sn': ['Kr', '5s2', '4d10', '5p2'],
@@ -78,7 +80,8 @@ electron_configurations = {
     'Os': ['Xe', '6s2', '4f14', '5d6'],
     'Ir': ['Xe', '6s2', '4f14', '5d7'],
     'Pt': ['Xe', '6s1', '4f14', '5d9'],
-    'Au': ['Xe', '6s1', '4f14', '5d10'],
+    # 'Au': ['Xe', '6s1', '4f14', '5d10'],
+    'Au': ['Xe', '6s2', '4f14', '5d9'],
     'Hg': ['Xe', '6s2', '4f14', '5d10'],
     'Tl': ['Xe', '6s2', '4f14', '5d10', '6p1'],
     'Pb': ['Xe', '6s2', '4f14', '5d10', '6p2'],
@@ -98,25 +101,70 @@ def count_valence_num(lst):
             valence_num += int(re.search(r'\d+$', item).group())  #`\d+$` match the end number, and .group() extract the matched number
     return valence_num
 
-def get_core_valence(element, nval):
-    core_init = electron_configurations[element][0]
-    vals_init =electron_configurations[element][1:]
-    nval_init = count_valence_num(vals_init)
+# 新增：按 n 升序、壳层类型 s<p<d<f 排序
+_L_ORDER = {'s': 0, 'p': 1, 'd': 2, 'f': 3, 'g': 4}
+_SHELL_RE = re.compile(r'^(\d+)([spdfg])(\d+)$')
+
+def _shell_key(s: str):
+    m = _SHELL_RE.match(s)
+    if not m:
+        return (-1, -1)  # 非壳层字符串（如惰性气体符号）放到最前面
+    n = int(m.group(1))
+    l = _L_ORDER[m.group(2)]
+    return (n, l)
+
+def sort_valence(shells):
+    # 只对形如 "4f14" 的条目排序
+    return sorted([s for s in shells], key=_shell_key)
+
+def expand_element(element, depth=1):
+    """Expand core notation to full electron configuration."""
+    config = electron_configurations[element]
+    if depth == 0:
+        return config
+    core = config[0]
+    val = config[1:]
+    config_core = expand_element(core, depth - 1)
+    expanded = config_core + val
+    return expanded
+
+def expand_core(config):
+    return expand_element(config[0], depth=0) + config[1:]
+
+def get_core_valence(element, nval_requested):
+    config = sort_valence(electron_configurations.get(element))
+    core = config[0]
+    val = config[1:]
+    nval = count_valence_num(val)
     if element == 'H' or element == 'He':
         return ["none"], electron_configurations[element]
-    elif nval_init == nval:   #treat the core as another element to analyze
-        return [core_init], vals_init
-    elif nval_init < nval:
-        core, val_inside = get_core_valence(core_init, nval-nval_init)
-        return core, val_inside + vals_init
-    elif nval_init > nval:   #try other possible valence numbers from the end of the list
-        nval_try = 0
-        core_left = electron_configurations[element]
-        val=[]
-        for str_try in reversed(vals_init):
-            nval_try += count_valence_num([str_try])
-            core_left.pop()
+    elif nval == nval_requested:   #treat the core as another element to analyze
+        return [core], val
+    else:
+        config = sort_valence(expand_core(config))  #expand the core
+        val = []
+        for str_try in reversed(config):
             val.insert(0, str_try)
-            if(nval_try == nval):
-                return core_left, val
+            config.pop()
+            nval_try = count_valence_num(val)
+            if(nval_try == nval_requested):
+                return config, val
     raise ValueError(f"Could not find core and valence for {element} with valence {nval}")
+
+
+if __name__ == "__main__":
+    test=2
+    match test:
+        case 0: # expand_element
+            print(expand_element('Au', depth=1))
+        case 1: # sort_valence
+            print(sort_valence(expand_element('Au', depth=1)))
+        case 2: # get_core_valence
+            cases = [
+                ('Au', 19),
+                ('W', 14),
+                ('W', 28)
+            ]
+            for element, valence in cases:
+                core, valence_shells = get_core_valence(element, valence)
+                print(f"(Element: {element}, Valence: {valence}) => Core: {core}, Valence Shells: {valence_shells}")

@@ -222,23 +222,55 @@ def combine_channels(channels, sort_by_l=False):
 
     return H_global, index_map
 
-class GridCPMD2UPF:
-    def __init__(self, zmesh=1, xmin=-7.00, rmax_init=100.0, dx=0.0125):
-        self.zmesh = zmesh # atomic number
-        self.xmin = xmin
-        self.rmax_init = rmax_init
-        self.dx = dx
 
-        self.gen_grid(self.zmesh)
+def combine_channels_soc(channels, soc_channels):
+    """
+    Build a single block-diagonal coupling matrix from all channels,
+    including SOC channels.
 
-        self.rab = self.r * self.dx
-        self.rmax = self.r[-1]
+    Parameters
+    ----------
+    channels : list of Channel
+        Each Channel has l, r_l, m, h_ij (packed).
+    soc_channels : list of Channel
+        Each Channel has l, r_l, m, k_ij (packed).
 
-    def gen_grid(self, zmesh):
-        "r_i = 1/zmesh * exp(xmin + i * dx)"
-        self.mesh = 1 + int((log(zmesh * self.rmax_init) - self.xmin) / self.dx)
-        self.mesh = (self.mesh // 2) * 2 + 1  # Make odd
-        self.r = np.zeros(self.mesh)
-        for i in range(self.mesh):
-            self.r[i] = exp(self.xmin + i * self.dx) / zmesh
+    Returns
+    -------
+    H_global : 2D numpy array
+        Block-diagonal matrix with one block per channel.
+    """
+    # Combine non-SOC and SOC channels
+    channels = list(channels)
+    soc_channels = list(soc_channels)
 
+    n0 = len([ch for ch in channels if ch.l==0])   # #number of l=0 channels
+    blocks = []
+    for idx, ch in enumerate(channels):
+        if ch.l == 0:
+            D_l = _packed_to_symm(ch.h_ij, ch.m)
+        else:
+            H_l = _packed_to_symm(ch.h_ij, ch.m)
+            idx_soc = idx-n0
+            K_l = _packed_to_symm(soc_channels[idx_soc].h_ij, soc_channels[idx_soc].m)
+            D_l = np.zeros((2*ch.m, 2*ch.m), dtype=float)
+            vnlp = H_l + 0.5 * K_l * ch.l
+            vnlm = H_l - 0.5 * K_l * (ch.l + 1)
+            for i in range(ch.m):
+                ii = 2*i
+                for j in range(ch.m):
+                    jj = 2*j
+                    D_l[ii, jj]     = vnlm[i, j]
+                    D_l[ii+1, jj+1] = vnlp[i, j]
+        blocks.append(D_l)
+
+    # Assemble block-diagonal matrix
+    total = sum(b.shape[0] for b in blocks)
+    H_global = np.zeros((total, total), dtype=float)
+    offset = 0
+    for B in blocks:
+        m = B.shape[0]
+        H_global[offset:offset+m, offset:offset+m] = B
+        offset += m
+
+    return H_global

@@ -56,13 +56,17 @@ def parse_gth_pp(text):
         except Exception:
             return False
 
+    is_soc = False
     n_l = None
     if idx < len(lines):
         tks = lines[idx].split()
-        if len(tks) == 1 and _looks_int_token(tks[0]):
+        if len(tks) >= 1 and _looks_int_token(tks[0]):
             n_l = int(float(tks[0]))
             idx += 1
-
+            if len(tks) > 1 and tks[1].strip() == 'SOC':
+                is_soc = True
+                print("Notice: currently only the latest CP2K version (2025.8+) supports SOC in ATOM module. See https://github.com/cp2k/cp2k/pull/4363 for the implementation.")
+                
     if n_l is None:
         # Fallback: read from the last token of line 1
         tks = lines[1].split()
@@ -72,6 +76,7 @@ def parse_gth_pp(text):
 
     # --- Nonlocal channels ---
     channels: List[Channel] = []
+    soc_channels: List[Channel] = []
     for l in range(n_l):
         if idx >= len(lines):
             raise ValueError(f"Unexpected EOF before channel l={l}")
@@ -100,7 +105,26 @@ def parse_gth_pp(text):
         channels.append(Channel(l=l, r_l=r_l, m=m_proj, h_ij=coeffs))
         idx += 1 + used  # advance past this block (first line + continuation lines)
 
-    return GTHPP(element, xc_label, q_hdr, local, channels)
+        # If SOC, read soc_channels for l>=1
+        if is_soc and l >= 1:
+            if idx + m_proj - 1 >= len(lines):
+                raise ValueError(f"Unexpected EOF while reading SOC k_ij for l={l}")
+            soc_coeffs = lines[idx].split()
+            used = 0
+            while len(soc_coeffs) < need:
+                used += 1
+                if idx + used >= len(lines):
+                    raise ValueError(f"Unexpected EOF while reading SOC k_ij for l={l}")
+                soc_coeffs.extend(lines[idx + used].split())
+                
+            soc_coeffs = [float(x) for x in soc_coeffs[:need]]
+            if len(soc_coeffs) != need:
+                raise ValueError(f"l={l} SOC: expected {need} k_ij, got {len(soc_coeffs)}")
+
+            soc_channels.append(Channel(l=l, r_l=channels[-1].r_l, m=m_proj, h_ij=soc_coeffs))
+            idx += 1 + used  # advance past SOC lines
+            
+    return GTHPP(element, xc_label, q_hdr, local, channels, is_soc, soc_channels)
 
 
 
@@ -247,6 +271,8 @@ class GTHPP:
     q: int
     local: LocalPart
     channels: List[Channel]
+    is_soc: Optional[bool] = False
+    soc_channels: Optional[List[Channel]] = None
 
 def _is_int_line(s: str) -> bool:
     t = s.split()

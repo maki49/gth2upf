@@ -4,10 +4,8 @@ import os
 import re
 import elec_config
 def find_pseudo_content(gth_path, element, xc, valence):
-    print("gth_path: ", gth_path)
     search_str = f"GTH-{xc.upper()}-q{valence}"
     pattern = fr'{element} {search_str}'
-    print('===> pattern', pattern)
     with open(gth_path, 'r') as f:
         lines = f.readlines()
     content = []
@@ -21,19 +19,18 @@ def find_pseudo_content(gth_path, element, xc, valence):
             content.append(line)
     if not found:
         raise ValueError(f"Could not find pseudo potential for {element} with xc={xc} and valence {valence}")
-    return ''.join(content[1:]) #remove the matched header line
+    return content[0], ''.join(content[1:]) #separate header and content
   
 def gen_cp2k_input(data):
-    #gth_path=os.path.join(data['cp2k_path'], 'data', 'GTH_POTENTIALS')
-    gth_path=data['gth_path']
+    gth_path=data.setdefault('gth_path', 'GTH_POTENTIALS')
     element = data['element']
     xc= data.setdefault('xc', 'PBE')
     valence= data['valence']
-    pseudo_content = find_pseudo_content(gth_path, element, xc, valence)
+    _, pseudo_content = find_pseudo_content(gth_path, element, xc, valence)
     prefix= data.setdefault('prefix', f"{element}-GTH-{xc}-q{valence}")
     core, valence = elec_config.get_core_valence(element, valence)
     
-    quadrature = data.get('quadrature', 'GC_LOG')
+    quadrature = data.setdefault('quadrature', 'GC_LOG')
     cp2k_quadrature = ['GC_LOG', 'GC_SIMPLE', 'GC_TRANSFORMED']
     if quadrature.upper() not in cp2k_quadrature:
         quadrature = 'GC_LOG'
@@ -49,8 +46,7 @@ def gen_cp2k_input(data):
       
     str_valence ="CORE "+' '.join(valence)
     
-    cp2k_inp_content=f"""
-&GLOBAL
+    cp2k_inp_content=f"""&GLOBAL
   PROJECT {element}
   PROGRAM_NAME ATOM
 &END GLOBAL
@@ -67,7 +63,7 @@ def gen_cp2k_input(data):
   &END METHOD
   &PRINT
     &ANALYZE_BASIS
-         OVERLAP_CONDITION_NUMBER T
+         ! OVERLAP_CONDITION_NUMBER T   # not available for lmax > 2
          COMPLETENESS T
     &END ANALYZE_BASIS
     &UPF_FILE
@@ -93,30 +89,38 @@ def gen_cp2k_input(data):
 
 #def run_cp2k(cp2k_dir, inp, out="cp2k.out"):
 #    os.system(f"{os.path.join(cp2k_dir, 'exe', 'local', 'cp2k.popt')} -o {out} {inp}")
-def run_cp2k(cp2k_exe, inp, out='cp2k.out'):
-    os.system(f"{cp2k_exe} -o {out} {inp}")
-
+def run_cp2k(cp2k_path, inp, out='cp2k.out'):
+    os.system(f"{cp2k_path} -o {out} {inp}")
+    
+    
+from upf_data import read_upf_file, write_upf_v2
 def postprocess(data):
-    outfile=data['prefix']+"-1.upf"
+    outfile = data['prefix']+"-1.upf"
     os.system(f"sed -i 's/functional=\"DFT\"/functional=\"{data['xc'].upper()}\"/' {outfile}")
+    
+    upf = read_upf_file(outfile)
+    upf = upf.correct_lmax().correct_zmesh()
+    quadrature = data.setdefault('quadrature', 'GC_LOG')
+    if quadrature.upper() == 'CPMD2UPF_DEFAULT':
+        gth_header, gth_content = find_pseudo_content(data.setdefault('gth_path', 'GTH_POTENTIALS'),
+                                         data['element'],
+                                         data.setdefault('xc', 'PBE'),
+                                         data['valence'])
+        upf = upf.replace_grid_by_eval(gth_content=''.join([gth_header, gth_content]))
+    write_upf_v2(upf, outfile)
 
 def gen_single_upf(data):
     inp = gen_cp2k_input(data)
-    run_cp2k(data['cp2k_path'], inp)
+    cp2k_path = data.get('cp2k_path', 'cp2k.popt')
+    run_cp2k(cp2k_path, inp)
     postprocess(data)
-    
+    return data['prefix']+"-1.upf"  #out file path
+
 def main(file_path):
     with open(file_path, 'r') as file:
         params = json.load(file)
     gen_single_upf(params)
 
-    from upf_data import read_upf_file, write_upf_v2
-    # postprocess
-    upf_gen = read_upf_file(params['prefix']+"-1.upf")
-    upf = upf_gen.correct_lmax().correct_zmesh()
-    if params['quadrature'].upper() == 'CPMD2UPF_DEFAULT':
-        upf = upf.replace_grid()
-    write_upf_v2(upf, params['prefix']+"-1.upf")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
