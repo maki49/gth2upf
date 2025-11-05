@@ -681,6 +681,27 @@ def write_upf_v2(upf: UPFData, filename: str):
             f.write(line.rstrip() + '\n')
         f.write('  </PP_RHOATOM>\n')
         
+        if upf.has_so:
+            def get_j(l:int, il:int, n0:int)->float:
+                if l == 0 or il < n0:
+                    return 0.5
+                elif (il - n0) % 2 == 1:
+                    return l + 0.5
+                else:
+                    return l - 0.5
+
+            f.write('  <PP_SPIN_ORB>\n')
+            n0 = len([i for i in upf.lll if i == 0])    # number of s-channel
+            for i in range(upf.nbeta):
+                lval = upf.lll[i]
+                jval = get_j(lval, i, n0)
+                f.write(f'    <PP_RELBETA.{i+1}  index="{i+1}"  lll="{int(lval)}" jjj="{jval:g}"/>\n')
+            n0 = len([i for i in upf.lchi if i == 0])    # number of s-wavefunction
+            for i in range(upf.nwfc):
+                lval = upf.lchi[i]
+                jval = get_j(lval, i, n0)
+                f.write(f'    <PP_RELWFC.{i+1}  index="{i+1}"  lchi="{int(lval)}" jchi="{jval:g}" nn="{(i+1)//2+1}"/>\n') # n = 1, 2, 2, 3, 3, 4...
+            f.write('  </PP_SPIN_ORB>\n')
         f.write('</UPF>\n')
 
 import numpy as np

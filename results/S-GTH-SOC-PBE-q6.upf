@@ -3831,4 +3831,15 @@ S
      3.59755072536e-30  3.59755072536e-30  3.59755072536e-30  3.59755072536e-30
      3.59755072536e-30  3.59755072536e-30  3.59755072536e-30
   </PP_RHOATOM>
+  <PP_SPIN_ORB>
+    <PP_RELBETA.1  index="1"  lll="0" jjj="0.5"/>
+    <PP_RELBETA.2  index="2"  lll="0" jjj="0.5"/>
+    <PP_RELBETA.3  index="3"  lll="1" jjj="0.5"/>
+    <PP_RELBETA.4  index="4"  lll="1" jjj="1.5"/>
+    <PP_RELBETA.5  index="5"  lll="1" jjj="0.5"/>
+    <PP_RELBETA.6  index="6"  lll="1" jjj="1.5"/>
+    <PP_RELWFC.1  index="1"  lchi="0" jchi="0.5" nn="1"/>
+    <PP_RELWFC.2  index="2"  lchi="1" jchi="0.5" nn="2"/>
+    <PP_RELWFC.3  index="3"  lchi="1" jchi="1.5" nn="2"/>
+  </PP_SPIN_ORB>
 </UPF>
