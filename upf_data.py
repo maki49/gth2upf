@@ -69,6 +69,7 @@ class UPFData:
         self.chi = None
         self.rho_at = None
         self.jchi = []  # j of each PSWFC
+        self.nn = []    # shell index from PP_RELWFC if present
         # tolerance
         self.rtol = 1e-6
         self.atol = 1e-6
@@ -101,6 +102,121 @@ class UPFData:
         return self
     def correct_zmesh(self):
         self.grid.zmesh = ElementList().name2index(self.psd)
+        return self
+
+    def normalize_soc_wfc_occupations(self, energy_tol: float = 1e-8):
+        """Redistribute SOC PSWFC occupations according to 2j+1 degeneracy."""
+        if not self.has_so or self.nwfc == 0:
+            return self
+        if len(self.oc) != self.nwfc or len(self.lchi) != self.nwfc or len(self.jchi) != self.nwfc:
+            return self
+
+        occ = np.asarray(self.oc, dtype=float).copy()
+        epseu = np.asarray(self.epseu, dtype=float) if len(self.epseu) == self.nwfc else None
+
+        i = 0
+        while i < self.nwfc - 1:
+            l_now = int(self.lchi[i])
+            l_next = int(self.lchi[i + 1])
+            if l_now == 0 or l_now != l_next:
+                i += 1
+                continue
+
+            j_now = float(self.jchi[i])
+            j_next = float(self.jchi[i + 1])
+            is_soc_pair = (
+                abs((j_now + j_next) - 2.0 * l_now) < 1e-8
+                and abs(abs(j_now - j_next) - 1.0) < 1e-8
+            )
+            if not is_soc_pair:
+                i += 1
+                continue
+
+            same_shell = True
+            if epseu is not None:
+                same_shell = abs(epseu[i] - epseu[i + 1]) < energy_tol
+            elif self.chi is not None and len(self.chi) == self.nwfc:
+                same_shell = np.allclose(self.chi[i], self.chi[i + 1], rtol=self.rtol, atol=self.atol)
+            if not same_shell:
+                i += 1
+                continue
+
+            total_occ = occ[i] + occ[i + 1]
+            weights = np.array([2.0 * j_now + 1.0, 2.0 * j_next + 1.0], dtype=float)
+            occ[i:i + 2] = total_occ * weights / weights.sum()
+            i += 2
+
+        self.oc = occ
+        return self
+
+    def canonicalize_soc_wfc_order(self, energy_tol: float = 1e-8):
+        """Reorder SOC PSWFC pairs to the conventional j=l+1/2, j=l-1/2 order."""
+        if not self.has_so or self.nwfc == 0:
+            return self
+        if len(self.lchi) != self.nwfc or len(self.jchi) != self.nwfc:
+            return self
+
+        fields = {
+            "lchi": list(self.lchi),
+            "jchi": list(self.jchi),
+        }
+        if len(self.oc) == self.nwfc:
+            fields["oc"] = list(self.oc)
+        if len(self.epseu) == self.nwfc:
+            fields["epseu"] = list(self.epseu)
+        if len(self.nn) == self.nwfc:
+            fields["nn"] = list(self.nn)
+        if len(self.els) == self.nwfc:
+            fields["els"] = list(self.els)
+        if self.chi is not None and len(self.chi) == self.nwfc:
+            fields["chi"] = list(self.chi)
+
+        epseu = np.asarray(self.epseu, dtype=float) if len(self.epseu) == self.nwfc else None
+
+        i = 0
+        while i < self.nwfc - 1:
+            l_now = int(fields["lchi"][i])
+            l_next = int(fields["lchi"][i + 1])
+            if l_now == 0 or l_now != l_next:
+                i += 1
+                continue
+
+            j_now = float(fields["jchi"][i])
+            j_next = float(fields["jchi"][i + 1])
+            is_soc_pair = (
+                abs((j_now + j_next) - 2.0 * l_now) < 1e-8
+                and abs(abs(j_now - j_next) - 1.0) < 1e-8
+            )
+            if not is_soc_pair:
+                i += 1
+                continue
+
+            same_shell = True
+            if epseu is not None:
+                same_shell = abs(epseu[i] - epseu[i + 1]) < energy_tol
+            elif "chi" in fields:
+                same_shell = np.allclose(fields["chi"][i], fields["chi"][i + 1], rtol=self.rtol, atol=self.atol)
+            if not same_shell:
+                i += 1
+                continue
+
+            if j_now < j_next:
+                for values in fields.values():
+                    values[i], values[i + 1] = values[i + 1], values[i]
+            i += 2
+
+        self.lchi = np.array(fields["lchi"], dtype=int)
+        self.jchi = [float(val) for val in fields["jchi"]]
+        if "oc" in fields:
+            self.oc = np.array(fields["oc"], dtype=float)
+        if "epseu" in fields:
+            self.epseu = np.array(fields["epseu"], dtype=float)
+        if "nn" in fields:
+            self.nn = [int(val) if val is not None else None for val in fields["nn"]]
+        if "els" in fields:
+            self.els = fields["els"]
+        if "chi" in fields:
+            self.chi = fields["chi"]
         return self
             
     def replace_grid(self, grid:Grid = None):
@@ -489,6 +605,77 @@ def read_upf_file(filename):
                     if line.strip():
                         wfc_values.extend([float(x) for x in line.split()])
                 upf_data.chi.append(np.array(wfc_values))
+
+    # Parse PP_SPIN_ORB section for SOC metadata
+    spin_orb_match = re.search(r'<PP_SPIN_ORB>(.*?)</PP_SPIN_ORB>', content, re.DOTALL)
+    if spin_orb_match:
+        spin_orb_content = spin_orb_match.group(1)
+
+        relwfc_iter = re.finditer(r'<PP_RELWFC\.(\d+)([^>]*)/>', spin_orb_content)
+        relwfc = []
+        for m in relwfc_iter:
+            attrs = m.group(2)
+            entry = {
+                'index': int(m.group(1)),
+                'lchi': None,
+                'jchi': None,
+                'nn': None,
+                'oc': None,
+            }
+            l_m = re.search(r'lchi="([^"]+)"', attrs)
+            j_m = re.search(r'jchi="([^"]+)"', attrs)
+            nn_m = re.search(r'nn="([^"]+)"', attrs)
+            oc_m = re.search(r'oc="([^"]+)"', attrs)
+            if l_m:
+                entry['lchi'] = int(l_m.group(1))
+            if j_m:
+                entry['jchi'] = float(j_m.group(1))
+            if nn_m:
+                entry['nn'] = int(float(nn_m.group(1)))
+            if oc_m:
+                entry['oc'] = float(oc_m.group(1))
+            relwfc.append(entry)
+        if relwfc:
+            relwfc.sort(key=lambda item: item['index'])
+            if len(relwfc) == upf_data.nwfc:
+                lchi = [entry['lchi'] for entry in relwfc]
+                if all(val is not None for val in lchi):
+                    upf_data.lchi = np.array(lchi, dtype=int)
+                jchi = [entry['jchi'] for entry in relwfc]
+                if all(val is not None for val in jchi):
+                    upf_data.jchi = jchi
+                nn = [entry['nn'] for entry in relwfc]
+                if all(val is not None for val in nn):
+                    upf_data.nn = nn
+                relwfc_oc = [entry['oc'] for entry in relwfc]
+                if all(val is not None for val in relwfc_oc):
+                    upf_data.oc = np.array(relwfc_oc)
+
+        relbeta_iter = re.finditer(r'<PP_RELBETA\.(\d+)([^>]*)/>', spin_orb_content)
+        relbeta = []
+        for m in relbeta_iter:
+            attrs = m.group(2)
+            entry = {
+                'index': int(m.group(1)),
+                'lll': None,
+                'jjj': None,
+            }
+            l_m = re.search(r'lll="([^"]+)"', attrs)
+            j_m = re.search(r'jjj="([^"]+)"', attrs)
+            if l_m:
+                entry['lll'] = int(l_m.group(1))
+            if j_m:
+                entry['jjj'] = float(j_m.group(1))
+            relbeta.append(entry)
+        if relbeta:
+            relbeta.sort(key=lambda item: item['index'])
+            if len(relbeta) == upf_data.nbeta:
+                lll = [entry['lll'] for entry in relbeta]
+                if all(val is not None for val in lll):
+                    upf_data.lll = np.array(lll, dtype=int)
+                jjj = [entry['jjj'] for entry in relbeta]
+                if all(val is not None for val in jjj):
+                    upf_data.jjj = jjj
     
     # Parse PP_RHOATOM section (atomic charge density)
     rhoatom_match = re.search(r'<PP_RHOATOM[^>]*>([^<]+)</PP_RHOATOM>', content, re.DOTALL)
@@ -694,13 +881,14 @@ def write_upf_v2(upf: UPFData, filename: str):
             n0 = len([i for i in upf.lll if i == 0])    # number of s-channel
             for i in range(upf.nbeta):
                 lval = upf.lll[i]
-                jval = get_j(lval, i, n0)
+                jval = upf.jjj[i] if i < len(upf.jjj) and upf.jjj[i] is not None else get_j(lval, i, n0)
                 f.write(f'    <PP_RELBETA.{i+1}  index="{i+1}"  lll="{int(lval)}" jjj="{jval:g}"/>\n')
             n0 = len([i for i in upf.lchi if i == 0])    # number of s-wavefunction
             for i in range(upf.nwfc):
                 lval = upf.lchi[i]
-                jval = get_j(lval, i, n0)
-                f.write(f'    <PP_RELWFC.{i+1}  index="{i+1}"  lchi="{int(lval)}" jchi="{jval:g}" nn="{(i+1)//2+1}"/>\n') # n = 1, 2, 2, 3, 3, 4...
+                jval = upf.jchi[i] if i < len(upf.jchi) and upf.jchi[i] is not None else get_j(lval, i, n0)
+                nn = upf.nn[i] if i < len(upf.nn) and upf.nn[i] is not None else (i+1)//2+1
+                f.write(f'    <PP_RELWFC.{i+1}  index="{i+1}"  lchi="{int(lval)}" jchi="{jval:g}" nn="{int(nn)}"/>\n')
             f.write('  </PP_SPIN_ORB>\n')
         f.write('</UPF>\n')
 

@@ -103,6 +103,8 @@ def postprocess(data):
     rel = {True: "full", False: "scalar"}
     upf.rel = rel[upf.has_so]
     upf.dft = data['xc'].upper()
+    upf.canonicalize_soc_wfc_order()
+    upf.normalize_soc_wfc_occupations()
     quadrature = data.setdefault('quadrature', 'GC_LOG')
     if quadrature.upper() == 'CPMD2UPF_DEFAULT':
         gth_header, gth_content = find_pseudo_content(data.setdefault('gth_path', 'GTH_POTENTIALS'),
