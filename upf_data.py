@@ -285,15 +285,14 @@ class UPFData:
         self.kbeta = kbeta
         self.kkbeta = max(kbeta)
         
-        # check and replace dij (should be 2 times of cp2k-generated upf, due to Ry unit)
+        # With beta = 2*r*p, D = h/2 gives beta*D*beta = 2*r*p*h*p*r
+        # in Ry. Keep the same normalization as CP2K's UPF writer.
         if self.has_so:
             dij = combine_channels_soc(gth.channels, gth.soc_channels)
         else:
             dij, _ = combine_channels(gth.channels)
-        # compare: dij/2 is close to self.dion
-        assert np.allclose(dij / 2, self.dion), "dij/2 is not close to self.dion"
-        # print("dij eval:", dij)
-        # print("dij read from cp2k-generated upf:", self.dion)
+        dij = dij / 2
+        assert np.allclose(dij, self.dion), "h_ij/2 is not close to the CP2K-generated dion"
         self.dion = dij
         
         #interpolate rho_at, rho_atc and chi functions
